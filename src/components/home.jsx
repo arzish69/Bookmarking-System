@@ -11,12 +11,24 @@ function Home() {
       <div className="home_banner-container">
         <img src={images} alt="" />
       </div>
-      <div className="home-section"></div>
-      <div className="home-section gray"></div>
-      <div className="home-section"></div>
-      <div className="home-section gray"></div>
-      <div className="home-section"></div>
-      <div className="home-section gray"></div>
+      <div className="home-section">
+        <h1 className="right-text">Lauda te Lassun</h1>
+      </div>
+      <div className="home-section gray">
+        <h1 className="left-text"> Lauda te Lassun</h1>
+      </div>
+      <div className="home-section">
+        <h1 className="right-text">Lauda te Lassun</h1>
+      </div>
+      <div className="home-section gray">
+        <h1 className="left-text"> Lauda te Lassun</h1>
+      </div>
+      <div className="home-section">
+        <h1 className="right-text">Lauda te Lassun</h1>
+      </div>
+      <div className="home-section gray">
+        <h1 className="left-text"> Lauda te Lassun</h1>
+      </div>
       <Footer />
     </>
   );

@@ -17,7 +17,17 @@
 
 .home-section {
   min-height: 50vh;
+  display: flex;
+  align-items: center;
 }
 .gray {
   background-color: rgb(211, 211, 211);
+}
+
+.right-text {
+  margin-left: 60%;
+}
+
+.left-text {
+  margin-left: 20%;
 }
