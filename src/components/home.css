@@ -14,3 +14,10 @@
   object-fit: cover;
   transform: translate(-50%, -50%);
 }
+
+.home-section {
+  min-height: 50vh;
+}
+.gray {
+  background-color: rgb(211, 211, 211);
+}

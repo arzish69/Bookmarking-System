@@ -11,6 +11,12 @@ function Home() {
       <div className="home_banner-container">
         <img src={images} alt="" />
       </div>
+      <div className="home-section"></div>
+      <div className="home-section gray"></div>
+      <div className="home-section"></div>
+      <div className="home-section gray"></div>
+      <div className="home-section"></div>
+      <div className="home-section gray"></div>
       <Footer />
     </>
   );
