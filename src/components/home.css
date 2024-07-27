@@ -31,3 +31,33 @@
 .left-text {
   margin-left: 20%;
 }
+
+.text-overlay {
+  position: absolute;
+  top: 50%; /* Adjust the position as needed */
+  left: 50%; /* Adjust the position as needed */
+  transform: translate(-50%, -50%);
+  color: rgb(0, 0, 0); /* Adjust text color */
+  font-size: 24px; /* Adjust font size */
+  font-weight: bold; /* Adjust font weight */
+  text-align: center;
+}
+
+.home_banner-container .btn {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  -ms-transform: translate(-50%, -50%);
+  background-color: #555;
+  color: white;
+  font-size: 16px;
+  padding: 12px 24px;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.home_banner-container .btn:hover {
+  background-color: black;
+}
