@@ -18,28 +18,18 @@ function Footer() {
 
           <ul className="nav col-md-4 justify-content-end">
             <li className="nav-item">
-              <a href="#" className="nav-link px-2 text-muted">
+              <a href="/home" className="nav-link px-2 text-muted">
                 Home
               </a>
             </li>
             <li className="nav-item">
               <a href="#" className="nav-link px-2 text-muted">
-                Features
+                Privacy Policy
               </a>
             </li>
             <li className="nav-item">
               <a href="#" className="nav-link px-2 text-muted">
-                Pricing
-              </a>
-            </li>
-            <li className="nav-item">
-              <a href="#" className="nav-link px-2 text-muted">
-                FAQs
-              </a>
-            </li>
-            <li className="nav-item">
-              <a href="#" className="nav-link px-2 text-muted">
-                About
+                Contact Us
               </a>
             </li>
           </ul>

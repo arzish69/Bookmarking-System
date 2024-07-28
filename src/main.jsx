@@ -5,6 +5,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
 import Blog from "./components/blog.jsx";
 import Home from "./components/home.jsx";
+import Downloads from "./components/downloads.jsx";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
@@ -13,7 +14,15 @@ const router = createBrowserRouter([
     path: "/",
     element: (
       <div>
-        <App />
+        <Home />
+      </div>
+    ),
+  },
+  {
+    path: "home",
+    element: (
+      <div>
+        <Home />
       </div>
     ),
   },
@@ -26,10 +35,10 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: "home",
+    path: "downloads",
     element: (
       <div>
-        <Home />
+        <Downloads />
       </div>
     ),
   },

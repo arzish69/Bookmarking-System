@@ -1,9 +1,10 @@
 import React from "react";
+import "./navbar.css";
 import { Link } from "react-router-dom";
 
 const NavBar = () => {
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light">
+    <nav className="navbar navbar-expand-lg navbar-light">
       <div className="container-fluid">
         <a className="navbar-brand" href="/home">
           Clone
@@ -20,29 +21,28 @@ const NavBar = () => {
           <span className="navbar-toggler-icon"></span>
         </button>
         <div className="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item">
-              <Link className="nav-link" to="/home">
-                Home{" "}
+          <ul className="navbar-nav ms-auto mb-2 mb-lg-0">
+            <li className="nav-item mr">
+              <Link className="nav-link" to="/downloads">
+                Downloads{" "}
               </Link>
             </li>
-            <li className="nav-item">
+            <li className="nav-item mr">
               <Link className="nav-link" to="/blog">
                 Blog{" "}
               </Link>
             </li>
+            <li className="nav-item mr">
+              <Link className="nav-link" to="#">
+                Sign In{" "}
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link nav-button nav-box" to="#">
+                Sign Up
+              </Link>
+            </li>
           </ul>
-          <form className="d-flex">
-            <input
-              className="form-control me-2"
-              type="search"
-              placeholder="Search"
-              aria-label="Search"
-            />
-            <button className="btn btn-outline-success" type="submit">
-              Search
-            </button>
-          </form>
         </div>
       </div>
     </nav>
