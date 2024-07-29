@@ -28,11 +28,6 @@ const NavBar = () => {
               </Link>
             </li>
             <li className="nav-item mr">
-              <Link className="nav-link" to="/blog">
-                Blog{" "}
-              </Link>
-            </li>
-            <li className="nav-item mr">
               <Link className="nav-link" to="#">
                 Sign In{" "}
               </Link>

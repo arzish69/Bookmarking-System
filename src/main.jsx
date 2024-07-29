@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
-import Blog from "./components/blog.jsx";
 import Home from "./components/home.jsx";
 import Downloads from "./components/downloads.jsx";
 
@@ -23,14 +22,6 @@ const router = createBrowserRouter([
     element: (
       <div>
         <Home />
-      </div>
-    ),
-  },
-  {
-    path: "blog",
-    element: (
-      <div>
-        <Blog />
       </div>
     ),
   },
