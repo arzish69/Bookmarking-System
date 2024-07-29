@@ -18,18 +18,30 @@
 .home-section {
   min-height: 50vh;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center; /* Vertically centers the children */
+  padding: 20px; /* Add padding for spacing */
+  height: 200px; /* Adjust the height to your desired value */
 }
+
 .gray {
-  background-color: rgb(211, 211, 211);
+  background-color: #f0f0f0; /* Light gray background for alternating sections */
 }
 
 .right-text {
-  margin-left: 70%;
+  align-self: flex-end; /* Aligns the elements to the right */
+  text-align: right; /* Aligns text within each element to the right */
+  margin-right: 20%; /* Adjust this value to move the content towards the right */
 }
 
 .left-text {
-  margin-left: 20%;
+  align-self: flex-start; /* Aligns the elements to the left */
+  text-align: left; /* Aligns text within each element to the left */
+  margin-left: 20%; /* Adjust this value to move the content towards the left */
+}
+
+p {
+  font-size: x-large;
 }
 
 .text-overlay {
@@ -60,4 +72,7 @@
 
 .home_banner-container .btn:hover {
   background-color: black;
+}
+
+.p {
 }
