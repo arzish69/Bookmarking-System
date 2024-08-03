@@ -12,9 +12,9 @@ const SignUp = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (isLogin) {
-      navigate("/library"); // Navigate to home page after login
+      navigate("/library");
     } else {
-      navigate("/library"); // Navigate to dashboard after registration
+      navigate("/library");
     }
   };
 
