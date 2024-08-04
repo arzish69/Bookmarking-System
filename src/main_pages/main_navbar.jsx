@@ -1,71 +1,53 @@
+// src/Navbar.js
 import React from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap"; // Import necessary components from react-bootstrap
 
-function MainNavbar() {
+const MainNavbar = () => {
+  const userName = "John Doe"; // Example user name
+
   return (
-    <>
-      <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="#">
-          Navbar
-        </a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-toggle="collapse"
-          data-target="#navbarNavDropdown"
-          aria-controls="navbarNavDropdown"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNavDropdown">
-          <ul class="navbar-nav">
-            <li class="nav-item active">
-              <a class="nav-link" href="#">
-                Home <span class="sr-only">(current)</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">
-                Features
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">
-                Pricing
-              </a>
-            </li>
-            <li class="nav-item dropdown">
-              <a
-                class="nav-link dropdown-toggle"
-                href="#"
-                id="navbarDropdownMenuLink"
-                data-toggle="dropdown"
-                aria-haspopup="true"
-                aria-expanded="false"
-              >
-                Dropdown link
-              </a>
-              <div
-                class="dropdown-menu"
-                aria-labelledby="navbarDropdownMenuLink"
-              >
-                <a class="dropdown-item" href="#">
-                  Action
-                </a>
-                <a class="dropdown-item" href="#">
-                  Another action
-                </a>
-                <a class="dropdown-item" href="#">
-                  Something else here
-                </a>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </nav>
-    </>
+    <Navbar bg="light" expand="lg" fixed="top">
+      <Container>
+        <Navbar.Brand href="#home">Clone</Navbar.Brand>
+        <Navbar.Toggle aria-controls="navbar-nav" />
+        <Navbar.Collapse id="navbar-nav">
+          <Nav className="mx-auto">
+            <Nav.Link href="#home" className="mx-2">
+              My Library
+            </Nav.Link>
+            <Nav.Link href="#features" className="mx-2">
+              My outliners
+            </Nav.Link>
+            <Nav.Link href="#pricing" className="mx-2">
+              My groups
+            </Nav.Link>
+          </Nav>
+          <Nav className="ms-auto">
+            <NavDropdown
+              title={
+                <>
+                  <img
+                    src="https://via.placeholder.com/30"
+                    alt="User"
+                    className="rounded-circle"
+                    style={{ marginRight: "8px" }}
+                  />
+                  {userName}
+                </>
+              }
+              id="user-profile-dropdown"
+            >
+              <NavDropdown.Item href="#profile">Profile</NavDropdown.Item>
+              <NavDropdown.Item href="#settings">Settings</NavDropdown.Item>
+              <NavDropdown.Divider />
+              <NavDropdown.Item href="#logout">Logout</NavDropdown.Item>
+            </NavDropdown>
+          </Nav>
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
   );
-}
+};
 
 export default MainNavbar;

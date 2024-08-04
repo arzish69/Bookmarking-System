@@ -1,0 +1,16 @@
+.navbar-brand {
+  font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+  padding: 0.5rem 1rem;
+}
+
+.nav-dropdown-item img {
+  width: 30px;
+  height: 30px;
+}
+
+.user-profile {
+  margin-right: 700px;
+}
