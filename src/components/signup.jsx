@@ -1,20 +1,41 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { auth } from "../firebaseConfig"; // Import Firebase auth
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
 const SignUp = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState(""); // State for repeat password
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const navigate = useNavigate();
 
   const toggleForm = () => {
     setIsLogin(!isLogin);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLogin) {
-      navigate("/library");
-    } else {
-      navigate("/library");
+    try {
+      if (isLogin) {
+        // Handle login
+        await signInWithEmailAndPassword(auth, email, password);
+        navigate("/library");
+      } else {
+        // Handle signup
+        // Ensure passwords match
+        if (password !== repeatPassword) {
+          alert("Passwords do not match");
+          return;
+        }
+        await createUserWithEmailAndPassword(auth, email, password);
+        navigate("/library");
+      }
+    } catch (error) {
+      console.error("Error:", error.message);
+      alert(error.message);
     }
   };
 
@@ -35,6 +56,8 @@ const SignUp = () => {
                 type="email"
                 className="form-control"
                 id="loginEmail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -46,6 +69,8 @@ const SignUp = () => {
                 type="password"
                 className="form-control"
                 id="loginPassword"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
@@ -90,6 +115,8 @@ const SignUp = () => {
                 type="text"
                 className="form-control"
                 id="registerName"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
@@ -101,6 +128,8 @@ const SignUp = () => {
                 type="text"
                 className="form-control"
                 id="registerUsername"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
@@ -112,6 +141,8 @@ const SignUp = () => {
                 type="email"
                 className="form-control"
                 id="registerEmail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -123,6 +154,8 @@ const SignUp = () => {
                 type="password"
                 className="form-control"
                 id="registerPassword"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
@@ -134,6 +167,8 @@ const SignUp = () => {
                 type="password"
                 className="form-control"
                 id="registerRepeatPassword"
+                value={repeatPassword}
+                onChange={(e) => setRepeatPassword(e.target.value)}
                 required
               />
             </div>
