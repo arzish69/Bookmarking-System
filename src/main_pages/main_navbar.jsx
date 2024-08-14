@@ -18,10 +18,13 @@ const MainNavbar = () => {
               My Library
             </Nav.Link>
             <Nav.Link href="#features" className="mx-2">
-              My outliners
+              My Outliners
             </Nav.Link>
             <Nav.Link href="#pricing" className="mx-2">
-              My groups
+              My Groups
+            </Nav.Link>
+            <Nav.Link href="#home" className="mx-2">
+              AI Tools
             </Nav.Link>
           </Nav>
           <Nav className="ms-auto">
