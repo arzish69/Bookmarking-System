@@ -2,6 +2,7 @@
 import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap"; // Import necessary components from react-bootstrap
+import { Link } from "react-router-dom";
 
 const MainNavbar = () => {
   const userName = "John Doe"; // Example user name
@@ -41,7 +42,7 @@ const MainNavbar = () => {
               <NavDropdown.Item href="#profile">Profile</NavDropdown.Item>
               <NavDropdown.Item href="#settings">Settings</NavDropdown.Item>
               <NavDropdown.Divider />
-              <NavDropdown.Item href="#logout">Logout</NavDropdown.Item>
+              <NavDropdown.Item as={Link} to="/home">Logout</NavDropdown.Item>
             </NavDropdown>
           </Nav>
         </Navbar.Collapse>
