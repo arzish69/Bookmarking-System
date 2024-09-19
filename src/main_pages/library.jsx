@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from "react";
 import MainNavbar from "./main_navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Collapse } from "react-bootstrap"; // Make sure react-bootstrap is installed
+import { Collapse } from "react-bootstrap";
 
 const SideNav = () => {
   const [url, setUrl] = useState("");
+  const [title, setTitle] = useState(""); // New state for title
   const [message, setMessage] = useState("");
   const [urls, setUrls] = useState([]);
 
@@ -19,7 +20,7 @@ const SideNav = () => {
     try {
       const response = await fetch("http://localhost:3001/get-urls");
       const result = await response.json();
-      console.log(result.urls); // Log the fetched URLs
+      console.log(result.urls);
       setUrls(result.urls);
     } catch (error) {
       console.error("Error fetching URLs:", error);
@@ -36,7 +37,7 @@ const SideNav = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, title }), // Send both URL and title
       });
 
       const result = await response.json();
@@ -53,6 +54,7 @@ const SideNav = () => {
     }
 
     setUrl(""); // Clear input field after submission
+    setTitle(""); // Clear title field
   };
 
   // Function to handle URL deletion
@@ -77,7 +79,7 @@ const SideNav = () => {
   };
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [openDropdown, setOpenDropdown] = useState(null); // Manage which dropdown is open
+  const [openDropdown, setOpenDropdown] = useState(null);
 
   const items = [
     { name: "Bookmarks", hasDropdown: false },
@@ -111,6 +113,18 @@ const SideNav = () => {
         <h1>Paste Your Link</h1>
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="form-group">
+            <label htmlFor="title">Title:</label>
+            <input
+              type="text"
+              className="form-control"
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter a title for the webpage"
+              required
+            />
+          </div>
+          <div className="form-group">
             <label htmlFor="url">URL:</label>
             <input
               type="url"
@@ -137,17 +151,18 @@ const SideNav = () => {
         {/* Display list of saved URLs */}
         <h2 className="mt-5">Saved URLs</h2>
         <ul className="list-group mt-3">
-          {urls.map((savedUrl, index) => (
+          {urls.map((saved, index) => (
             <li
               key={index}
               className="list-group-item d-flex justify-content-between align-items-center"
             >
-              <a href={savedUrl} target="_blank" rel="noopener noreferrer">
-                {savedUrl}
+              <a href={saved.url} target="_blank" rel="noopener noreferrer">
+                {saved.title || saved.url}{" "}
+                {/* Display title or URL if title is missing */}
               </a>
               <button
                 className="btn btn-danger btn-sm"
-                onClick={() => handleDelete(savedUrl)}
+                onClick={() => handleDelete(saved.url)}
               >
                 Delete
               </button>
@@ -157,36 +172,6 @@ const SideNav = () => {
       </div>
     </>
   );
-};
-
-const styles = {
-  sideNav: {
-    width: "250px",
-    height: "calc(100vh - 56px)", // Adjust based on your navbar height
-    backgroundColor: "#f8f9fa",
-    position: "fixed",
-    top: "56px", // Adjust based on your navbar height
-    left: "0",
-    overflowY: "auto",
-    transition: "transform 0.3s ease",
-  },
-  filterContent: {
-    padding: "15px",
-  },
-  listMenu: {
-    listStyleType: "none",
-    padding: "0",
-  },
-  chevron: {
-    marginLeft: "auto",
-    transition: "transform 0.3s ease",
-  },
-  dropdownMenu: {
-    listStyleType: "none",
-    padding: "0",
-    margin: "0",
-    paddingLeft: "15px",
-  },
 };
 
 export default SideNav;
