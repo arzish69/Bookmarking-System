@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from "react";
 import MainNavbar from "./main_navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Collapse } from "react-bootstrap";
+import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; // Firestore functions
+import { db, auth } from "../firebaseConfig"; // Import Firestore and Auth
 
 const SideNav = () => {
   const [url, setUrl] = useState("");
-  const [title, setTitle] = useState(""); // New state for title
+  const [title, setTitle] = useState(""); 
   const [message, setMessage] = useState("");
   const [urls, setUrls] = useState([]);
 
@@ -15,13 +16,16 @@ const SideNav = () => {
     fetchSavedUrls();
   }, []);
 
-  // Function to fetch saved URLs from the backend
+  // Function to fetch saved URLs from Firestore
   const fetchSavedUrls = async () => {
     try {
-      const response = await fetch("http://localhost:3001/get-urls");
-      const result = await response.json();
-      console.log(result.urls);
-      setUrls(result.urls);
+      const user = auth.currentUser; // Get the current authenticated user
+      if (!user) return; // Exit if no user is authenticated
+
+      // Fetch URLs from the 'links' subcollection inside the 'users' collection
+      const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
+      const savedUrls = querySnapshot.docs.map((doc) => doc.data());
+      setUrls(savedUrls);
     } catch (error) {
       console.error("Error fetching URLs:", error);
     }
@@ -32,79 +36,45 @@ const SideNav = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:3001/save-webpage", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url, title }), // Send both URL and title
+      const user = auth.currentUser; // Get the current authenticated user
+      if (!user) return;
+
+      // Save the URL and title to Firestore in the 'links' subcollection
+      await addDoc(collection(db, "users", user.uid, "links"), {
+        url,
+        title,
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setMessage(result.message);
-        fetchSavedUrls(); // Fetch URLs again to update the list
-      } else {
-        setMessage("Failed to save webpage.");
-      }
+      setMessage("Webpage URL saved successfully");
+      fetchSavedUrls(); // Fetch URLs again to update the list
     } catch (error) {
       console.error("Error saving webpage:", error);
       setMessage("Error saving webpage.");
     }
 
-    setUrl(""); // Clear input field after submission
-    setTitle(""); // Clear title field
+    setUrl("");
+    setTitle("");
   };
 
   // Function to handle URL deletion
   const handleDelete = async (urlToDelete) => {
     try {
-      const response = await fetch("http://localhost:3001/delete-url", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: urlToDelete }),
+      const user = auth.currentUser; // Get the current authenticated user
+      if (!user) return;
+
+      // Query Firestore to find the matching document in the 'links' subcollection
+      const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
+      querySnapshot.forEach(async (docSnapshot) => {
+        if (docSnapshot.data().url === urlToDelete) {
+          await deleteDoc(doc(db, "users", user.uid, "links", docSnapshot.id));
+        }
       });
 
-      if (response.ok) {
-        fetchSavedUrls(); // Refresh the list after deletion
-      } else {
-        console.error("Failed to delete URL");
-      }
+      fetchSavedUrls(); // Refresh the list after deletion
     } catch (error) {
       console.error("Error deleting URL:", error);
     }
   };
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [openDropdown, setOpenDropdown] = useState(null);
-
-  const items = [
-    { name: "Bookmarks", hasDropdown: false },
-    {
-      name: "Annotate PDFs",
-      hasDropdown: true,
-      subItems: ["Luxury", "Sport", "Casual"],
-    },
-    { name: "Organize", hasDropdown: false },
-    {
-      name: "AI Summarizer",
-    },
-  ];
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value.toLowerCase());
-  };
-
-  const handleDropdownToggle = (index) => {
-    setOpenDropdown(openDropdown === index ? null : index);
-  };
-
-  const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(searchTerm)
-  );
 
   return (
     <>
@@ -157,8 +127,7 @@ const SideNav = () => {
               className="list-group-item d-flex justify-content-between align-items-center"
             >
               <a href={saved.url} target="_blank" rel="noopener noreferrer">
-                {saved.title || saved.url}{" "}
-                {/* Display title or URL if title is missing */}
+                {saved.title || saved.url} 
               </a>
               <button
                 className="btn btn-danger btn-sm"
