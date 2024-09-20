@@ -1,32 +1,31 @@
 import React, { useState, useEffect } from "react";
 import MainNavbar from "./main_navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; // Import doc
-import { db, auth } from "../firebaseConfig"; // Import Firestore and Auth
-import Spinner from "react-bootstrap/Spinner"; // Make sure to import Spinner
+import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; 
+import { db, auth } from "../firebaseConfig"; 
+import Spinner from "react-bootstrap/Spinner"; 
 
 const SideNav = () => {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState(""); 
   const [message, setMessage] = useState("");
-  const [urls, setUrls] = useState([]);
+  const [urls, setUrls] = useState(JSON.parse(localStorage.getItem("savedUrls")) || []);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [processingUrl, setProcessingUrl] = useState(null); 
 
   const sidebarItems = [
-    "Dashboard",
-    "Bookmarks",
-    "Annotate PDFs",
+    "All",
+    "Annotate",
     "AI Summarizer",
     "Organize",
-    "Settings",
-    "Help",
   ];
 
   useEffect(() => {
     fetchSavedUrls();
   }, []);
 
+  // Function to fetch saved URLs from Firestore
   const fetchSavedUrls = async () => {
     setLoading(true);
     try {
@@ -36,6 +35,7 @@ const SideNav = () => {
       const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
       const savedUrls = querySnapshot.docs.map((doc) => doc.data());
       setUrls(savedUrls);
+      localStorage.setItem("savedUrls", JSON.stringify(savedUrls));
     } catch (error) {
       console.error("Error fetching URLs:", error);
       setMessage("Error fetching URLs.");
@@ -44,31 +44,44 @@ const SideNav = () => {
     }
   };
 
+  // Function to handle form submission (save URL with timestamp)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const urlPattern = new RegExp("^(https?:\\/\\/)?([\\w-]+\\.)+[\\w-]+(\\/[\\w- ./?%&=]*)?$");
-    if (!urlPattern.test(url)) {
+
+    const encodedUrl = encodeURI(url);
+
+    const urlPattern = new RegExp("^(https?:\\/\\/)?([\\w.-]+)+(\\/[\\w- ./?%&=]*)?$");
+    if (!urlPattern.test(encodedUrl)) {
       setMessage("Invalid URL format.");
       return;
     }
-    if (urls.some((saved) => saved.url === url)) {
+
+    if (urls.some((saved) => saved.url === encodedUrl)) {
       setMessage("This URL has already been saved.");
       return;
     }
 
-    setLoading(true);
+    setProcessingUrl(encodedUrl);
+
     try {
       const user = auth.currentUser;
       if (!user) return;
 
-      await addDoc(collection(db, "users", user.uid, "links"), { url, title });
-      setMessage("Webpage URL saved successfully");
+      const timestamp = new Date(); // Save the current timestamp
+
+      await addDoc(collection(db, "users", user.uid, "links"), { 
+        url: encodedUrl, 
+        title, 
+        timestamp 
+      });
+
+      setMessage("Webpage URL saved successfully.");
       fetchSavedUrls();
     } catch (error) {
       console.error("Error saving webpage:", error);
       setMessage("Error saving webpage.");
     } finally {
-      setLoading(false);
+      setProcessingUrl(null);
     }
 
     setUrl("");
@@ -76,18 +89,18 @@ const SideNav = () => {
   };
 
   const handleDelete = async (urlToDelete) => {
-    setLoading(true);
+    setProcessingUrl(urlToDelete);
     try {
       const user = auth.currentUser;
       if (!user) return;
-  
+
       const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
       const docToDelete = querySnapshot.docs.find(doc => doc.data().url === urlToDelete);
-  
+
       if (docToDelete) {
         await deleteDoc(doc(db, "users", user.uid, "links", docToDelete.id));
         setMessage("URL deleted successfully.");
-        fetchSavedUrls(); // Refresh the list after deletion
+        fetchSavedUrls();
       } else {
         setMessage("URL not found.");
       }
@@ -95,10 +108,9 @@ const SideNav = () => {
       console.error("Error deleting URL:", error);
       setMessage("Error deleting URL.");
     } finally {
-      setLoading(false);
+      setProcessingUrl(null);
     }
   };
-  
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -183,8 +195,6 @@ const SideNav = () => {
           </div>
         )}
 
-        {loading && <Spinner animation="border" variant="primary" />}
-
         <h2 className="mt-5">Saved URLs</h2>
         <ul className="list-group mt-3">
           {filteredUrls.map((saved, index) => (
@@ -194,11 +204,18 @@ const SideNav = () => {
               className="list-group-item d-flex justify-content-between align-items-center"
             >
               <a href={saved.url} target="_blank" rel="noopener noreferrer">
-                {saved.title || saved.url} 
+                {saved.title || saved.url}
               </a>
+              <span className="text-muted ml-2">
+                {new Date(saved.timestamp?.seconds * 1000).toLocaleString()} {/* Display timestamp */}
+              </span>
+              {processingUrl === saved.url && (
+                <Spinner animation="border" size="sm" variant="primary" className="ml-2" />
+              )}
               <button
                 className="btn btn-danger btn-sm"
                 onClick={() => handleDelete(saved.url)}
+                disabled={processingUrl === saved.url}
               >
                 Delete
               </button>

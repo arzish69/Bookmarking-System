@@ -10,6 +10,9 @@ import SignUp from "./components/signup.jsx";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import UserAccount from "./components/user/user.jsx";
+import Groups from "./main_pages/group/group.jsx";
+import Ai from "./main_pages/ai/ai.jsx";
+import MainHome from "./main_pages/mainhome/mainhome.jsx";
 
 const router = createBrowserRouter([
   {
@@ -37,10 +40,34 @@ const router = createBrowserRouter([
     ),
   },
   {
+    path: "mainhome",
+    element: (
+      <div>
+        <MainHome />
+      </div>
+    ),
+  },
+  {
     path: "library",
     element: (
       <div>
         <Library />
+      </div>
+    ),
+  },
+  {
+    path: "groups",
+    element: (
+      <div>
+        <Groups />
+      </div>
+    ),
+  },
+  {
+    path: "ai",
+    element: (
+      <div>
+        <Ai />
       </div>
     ),
   },
