@@ -1,4 +1,3 @@
-// src/SideNav.js
 import React, { useState, useEffect } from "react";
 import MainNavbar from "./main_navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -10,6 +9,21 @@ const SideNav = () => {
   const [title, setTitle] = useState(""); 
   const [message, setMessage] = useState("");
   const [urls, setUrls] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Sidebar search state
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Sidebar items
+  const sidebarItems = [
+    "Dashboard",
+    "Bookmarks",
+    "Annotate PDFs",
+    "AI Summarizer",
+    "Organize",
+    "Settings",
+    "Help",
+  ];
 
   // Fetch URLs when component mounts
   useEffect(() => {
@@ -18,6 +32,7 @@ const SideNav = () => {
 
   // Function to fetch saved URLs from Firestore
   const fetchSavedUrls = async () => {
+    setLoading(true); // Show loader
     try {
       const user = auth.currentUser; // Get the current authenticated user
       if (!user) return; // Exit if no user is authenticated
@@ -28,6 +43,9 @@ const SideNav = () => {
       setUrls(savedUrls);
     } catch (error) {
       console.error("Error fetching URLs:", error);
+      setMessage("Error fetching URLs.");
+    } finally {
+      setLoading(false); // Hide loader after fetch
     }
   };
 
@@ -35,6 +53,22 @@ const SideNav = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate URL format using a basic regex
+    const urlPattern = new RegExp(
+      "^(https?:\\/\\/)?([\\w-]+\\.)+[\\w-]+(\\/[\\w- ./?%&=]*)?$"
+    );
+    if (!urlPattern.test(url)) {
+      setMessage("Invalid URL format.");
+      return;
+    }
+
+    // Check for duplicate URLs
+    if (urls.some((saved) => saved.url === url)) {
+      setMessage("This URL has already been saved.");
+      return;
+    }
+
+    setLoading(true); // Show loading during submission
     try {
       const user = auth.currentUser; // Get the current authenticated user
       if (!user) return;
@@ -50,6 +84,8 @@ const SideNav = () => {
     } catch (error) {
       console.error("Error saving webpage:", error);
       setMessage("Error saving webpage.");
+    } finally {
+      setLoading(false); // Hide loader
     }
 
     setUrl("");
@@ -58,6 +94,7 @@ const SideNav = () => {
 
   // Function to handle URL deletion
   const handleDelete = async (urlToDelete) => {
+    setLoading(true); // Show loading during deletion
     try {
       const user = auth.currentUser; // Get the current authenticated user
       if (!user) return;
@@ -79,7 +116,38 @@ const SideNav = () => {
   return (
     <>
       <MainNavbar />
-      <div className="container mt-5">
+
+      {/* Sidebar Section */}
+      <div style={styles.sidebar}>
+        <h3>Navigation</h3>
+        <div className="form-group">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+          />
+        </div>
+
+        <ul className="list-group mt-3">
+          {filteredSidebarItems.length > 0 ? (
+            filteredSidebarItems.map((item, index) => (
+              <li key={index} className="list-group-item">
+                {item}
+              </li>
+            ))
+          ) : (
+            <li className="list-group-item">No items found</li>
+          )}
+        </ul>
+      </div>
+
+      {/* Main Content */}
+      <div
+        className="container"
+        style={{ marginLeft: "270px", marginTop: "80px" }}
+      >
         <h1>Paste Your Link</h1>
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="form-group">
@@ -87,6 +155,7 @@ const SideNav = () => {
             <input
               type="text"
               className="form-control"
+              style={{ width: "50%" }}
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -99,6 +168,7 @@ const SideNav = () => {
             <input
               type="url"
               className="form-control"
+              style={{ width: "50%" }}
               id="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -113,17 +183,27 @@ const SideNav = () => {
 
         {/* Display success or error message */}
         {message && (
-          <div className="alert alert-info mt-4" role="alert">
+          <div
+            className={`alert mt-4 ${
+              message.includes("Error") ? "alert-danger" : "alert-info"
+            }`}
+            style={{ width: "50%" }}
+            role="alert"
+          >
             {message}
           </div>
         )}
 
+        {/* Display loading spinner */}
+        {loading && <Spinner animation="border" variant="primary" />}
+
         {/* Display list of saved URLs */}
         <h2 className="mt-5">Saved URLs</h2>
         <ul className="list-group mt-3">
-          {urls.map((saved, index) => (
+          {filteredUrls.map((saved, index) => (
             <li
               key={index}
+              style={{ width: "50%" }}
               className="list-group-item d-flex justify-content-between align-items-center"
             >
               <a href={saved.url} target="_blank" rel="noopener noreferrer">
@@ -141,6 +221,19 @@ const SideNav = () => {
       </div>
     </>
   );
+};
+
+const styles = {
+  sidebar: {
+    width: "250px",
+    height: "100vh",
+    backgroundColor: "#f8f9fa",
+    padding: "15px",
+    position: "fixed",
+    top: "60px",
+    left: "0",
+    overflowY: "auto",
+  },
 };
 
 export default SideNav;
