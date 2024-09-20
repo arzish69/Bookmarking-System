@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebaseConfig"; // Import Firebase auth
+import { auth, db } from "../firebaseConfig"; // Import Firebase auth and Firestore
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore"; // Firestore methods
 
 const SignUp = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,12 +26,22 @@ const SignUp = () => {
         navigate("/library");
       } else {
         // Handle signup
-        // Ensure passwords match
         if (password !== repeatPassword) {
           alert("Passwords do not match");
           return;
         }
-        await createUserWithEmailAndPassword(auth, email, password);
+
+        // Create user with Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Save user data (name, username) in Firestore under `/users/{userId}`
+        await setDoc(doc(db, "users", user.uid), {
+          name: name,
+          username: username,
+          email: email,
+        }, { merge: true });  // Merge to keep existing data
+
         navigate("/library");
       }
     } catch (error) {
@@ -49,9 +60,7 @@ const SignUp = () => {
         {isLogin ? (
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
-              <label htmlFor="loginEmail" className="form-label">
-                Email address
-              </label>
+              <label htmlFor="loginEmail" className="form-label">Email address</label>
               <input
                 type="email"
                 className="form-control"
@@ -62,9 +71,7 @@ const SignUp = () => {
               />
             </div>
             <div className="mb-3">
-              <label htmlFor="loginPassword" className="form-label">
-                Password
-              </label>
+              <label htmlFor="loginPassword" className="form-label">Password</label>
               <input
                 type="password"
                 className="form-control"
@@ -81,36 +88,19 @@ const SignUp = () => {
                   className="form-check-input"
                   id="rememberMe"
                 />
-                <label className="form-check-label" htmlFor="rememberMe">
-                  Remember me
-                </label>
+                <label className="form-check-label" htmlFor="rememberMe">Remember me</label>
               </div>
-              <a href="#!" className="text-decoration-none">
-                Forgot password?
-              </a>
+              <a href="#!" className="text-decoration-none">Forgot password?</a>
             </div>
-            <button type="submit" className="btn btn-primary w-100 mt-3">
-              Sign in
-            </button>
+            <button type="submit" className="btn btn-primary w-100 mt-3">Sign in</button>
             <div className="text-center mt-3">
-              <p>
-                Not a member?{" "}
-                <button
-                  type="button"
-                  className="btn btn-link"
-                  onClick={toggleForm}
-                >
-                  Register
-                </button>
-              </p>
+              <p>Not a member? <button type="button" className="btn btn-link" onClick={toggleForm}>Register</button></p>
             </div>
           </form>
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
-              <label htmlFor="registerName" className="form-label">
-                Name
-              </label>
+              <label htmlFor="registerName" className="form-label">Name</label>
               <input
                 type="text"
                 className="form-control"
@@ -121,9 +111,7 @@ const SignUp = () => {
               />
             </div>
             <div className="mb-3">
-              <label htmlFor="registerUsername" className="form-label">
-                Username
-              </label>
+              <label htmlFor="registerUsername" className="form-label">Username</label>
               <input
                 type="text"
                 className="form-control"
@@ -134,9 +122,7 @@ const SignUp = () => {
               />
             </div>
             <div className="mb-3">
-              <label htmlFor="registerEmail" className="form-label">
-                Email address
-              </label>
+              <label htmlFor="registerEmail" className="form-label">Email address</label>
               <input
                 type="email"
                 className="form-control"
@@ -147,9 +133,7 @@ const SignUp = () => {
               />
             </div>
             <div className="mb-3">
-              <label htmlFor="registerPassword" className="form-label">
-                Password
-              </label>
+              <label htmlFor="registerPassword" className="form-label">Password</label>
               <input
                 type="password"
                 className="form-control"
@@ -160,9 +144,7 @@ const SignUp = () => {
               />
             </div>
             <div className="mb-3">
-              <label htmlFor="registerRepeatPassword" className="form-label">
-                Repeat password
-              </label>
+              <label htmlFor="registerRepeatPassword" className="form-label">Repeat password</label>
               <input
                 type="password"
                 className="form-control"
@@ -179,24 +161,11 @@ const SignUp = () => {
                 id="agreeTerms"
                 required
               />
-              <label className="form-check-label" htmlFor="agreeTerms">
-                I agree to the terms and conditions
-              </label>
+              <label className="form-check-label" htmlFor="agreeTerms">I agree to the terms and conditions</label>
             </div>
-            <button type="submit" className="btn btn-primary w-100 mt-3">
-              Sign up
-            </button>
+            <button type="submit" className="btn btn-primary w-100 mt-3">Sign up</button>
             <div className="text-center mt-3">
-              <p>
-                Already a member?{" "}
-                <button
-                  type="button"
-                  className="btn btn-link"
-                  onClick={toggleForm}
-                >
-                  Login
-                </button>
-              </p>
+              <p>Already a member? <button type="button" className="btn btn-link" onClick={toggleForm}>Login</button></p>
             </div>
           </form>
         )}

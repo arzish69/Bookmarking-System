@@ -1,11 +1,33 @@
 // src/Navbar.js
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap"; // Import necessary components from react-bootstrap
-import { Link } from "react-router-dom";
+import { auth } from "../firebaseConfig"; // Import Firebase auth
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 const MainNavbar = () => {
-  const userName = "John Doe"; // Example user name
+  const [userName, setUserName] = useState(""); // Initialize with an empty string
+  const db = getFirestore();
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const userId = user.uid; // Get the user ID
+        const userDocRef = doc(db, "users", userId); // Reference to the user document
+        const userDoc = await getDoc(userDocRef); // Fetch the document
+
+        if (userDoc.exists()) {
+          // Get the username from the document
+          setUserName(userDoc.data().username);
+        } else {
+          console.log("No such user document!");
+        }
+      }
+    };
+
+    fetchUserName();
+  }, []);
 
   return (
     <Navbar bg="light" expand="lg" fixed="top">
@@ -37,7 +59,7 @@ const MainNavbar = () => {
                     className="rounded-circle"
                     style={{ marginRight: "8px" }}
                   />
-                  {userName}
+                  {userName || "Loading..."} {/* Show loading text until username is fetched */}
                 </>
               }
               id="user-profile-dropdown"
