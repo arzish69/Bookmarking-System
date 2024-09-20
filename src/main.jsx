@@ -9,6 +9,7 @@ import Library from "./main_pages/library.jsx";
 import SignUp from "./components/signup.jsx";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import UserAccount from "./components/user/user.jsx";
 
 const router = createBrowserRouter([
   {
@@ -48,6 +49,14 @@ const router = createBrowserRouter([
     element: (
       <div>
         <SignUp />
+      </div>
+    ),
+  },
+  {
+    path: "user",
+    element: (
+      <div>
+        <UserAccount />
       </div>
     ),
   },

@@ -59,13 +59,13 @@ const MainNavbar = () => {
                     className="rounded-circle"
                     style={{ marginRight: "8px" }}
                   />
-                  {userName || "Loading..."} {/* Show loading text until username is fetched */}
+                  {userName || "Loading..."}{" "}
+                  {/* Show loading text until username is fetched */}
                 </>
               }
               id="user-profile-dropdown"
             >
-              <NavDropdown.Item href="#profile">Profile</NavDropdown.Item>
-              <NavDropdown.Item href="#settings">Settings</NavDropdown.Item>
+              <NavDropdown.Item href="/user">Settings</NavDropdown.Item>
               <NavDropdown.Divider />
               <NavDropdown.Item href="/">Logout</NavDropdown.Item>
             </NavDropdown>
