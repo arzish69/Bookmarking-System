@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MainNavbar from "./main_navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { collection, addDoc, getDocs, deleteDoc } from "firebase/firestore"; // Firestore functions
+import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; // Import doc
 import { db, auth } from "../firebaseConfig"; // Import Firestore and Auth
 import Spinner from "react-bootstrap/Spinner"; // Make sure to import Spinner
 
@@ -80,21 +80,25 @@ const SideNav = () => {
     try {
       const user = auth.currentUser;
       if (!user) return;
-
+  
       const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
-      querySnapshot.forEach(async (docSnapshot) => {
-        if (docSnapshot.data().url === urlToDelete) {
-          await deleteDoc(doc(db, "users", user.uid, "links", docSnapshot.id));
-        }
-      });
-
-      fetchSavedUrls();
+      const docToDelete = querySnapshot.docs.find(doc => doc.data().url === urlToDelete);
+  
+      if (docToDelete) {
+        await deleteDoc(doc(db, "users", user.uid, "links", docToDelete.id));
+        setMessage("URL deleted successfully.");
+        fetchSavedUrls(); // Refresh the list after deletion
+      } else {
+        setMessage("URL not found.");
+      }
     } catch (error) {
       console.error("Error deleting URL:", error);
+      setMessage("Error deleting URL.");
     } finally {
       setLoading(false);
     }
   };
+  
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
