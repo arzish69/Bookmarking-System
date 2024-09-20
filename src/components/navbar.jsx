@@ -27,14 +27,10 @@ const NavBar = () => {
                 Downloads{" "}
               </Link>
             </li>
-            <li className="nav-item mr">
-              <Link className="nav-link" to="#">
-                Sign In{" "}
-              </Link>
-            </li>
+            
             <li className="nav-item">
               <Link className="nav-link nav-button nav-box" to="/signup">
-                Sign Up
+                Get Started
               </Link>
             </li>
           </ul>
