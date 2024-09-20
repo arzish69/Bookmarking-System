@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import MainNavbar from "./main_navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; // Firestore functions
+import { collection, addDoc, getDocs, deleteDoc } from "firebase/firestore"; // Firestore functions
 import { db, auth } from "../firebaseConfig"; // Import Firestore and Auth
+import Spinner from "react-bootstrap/Spinner"; // Make sure to import Spinner
 
 const SideNav = () => {
   const [url, setUrl] = useState("");
@@ -10,11 +11,8 @@ const SideNav = () => {
   const [message, setMessage] = useState("");
   const [urls, setUrls] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // Sidebar search state
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Sidebar items
   const sidebarItems = [
     "Dashboard",
     "Bookmarks",
@@ -25,19 +23,16 @@ const SideNav = () => {
     "Help",
   ];
 
-  // Fetch URLs when component mounts
   useEffect(() => {
     fetchSavedUrls();
   }, []);
 
-  // Function to fetch saved URLs from Firestore
   const fetchSavedUrls = async () => {
-    setLoading(true); // Show loader
+    setLoading(true);
     try {
-      const user = auth.currentUser; // Get the current authenticated user
-      if (!user) return; // Exit if no user is authenticated
+      const user = auth.currentUser;
+      if (!user) return;
 
-      // Fetch URLs from the 'links' subcollection inside the 'users' collection
       const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
       const savedUrls = querySnapshot.docs.map((doc) => doc.data());
       setUrls(savedUrls);
@@ -45,61 +40,47 @@ const SideNav = () => {
       console.error("Error fetching URLs:", error);
       setMessage("Error fetching URLs.");
     } finally {
-      setLoading(false); // Hide loader after fetch
+      setLoading(false);
     }
   };
 
-  // Function to handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validate URL format using a basic regex
-    const urlPattern = new RegExp(
-      "^(https?:\\/\\/)?([\\w-]+\\.)+[\\w-]+(\\/[\\w- ./?%&=]*)?$"
-    );
+    const urlPattern = new RegExp("^(https?:\\/\\/)?([\\w-]+\\.)+[\\w-]+(\\/[\\w- ./?%&=]*)?$");
     if (!urlPattern.test(url)) {
       setMessage("Invalid URL format.");
       return;
     }
-
-    // Check for duplicate URLs
     if (urls.some((saved) => saved.url === url)) {
       setMessage("This URL has already been saved.");
       return;
     }
 
-    setLoading(true); // Show loading during submission
+    setLoading(true);
     try {
-      const user = auth.currentUser; // Get the current authenticated user
+      const user = auth.currentUser;
       if (!user) return;
 
-      // Save the URL and title to Firestore in the 'links' subcollection
-      await addDoc(collection(db, "users", user.uid, "links"), {
-        url,
-        title,
-      });
-
+      await addDoc(collection(db, "users", user.uid, "links"), { url, title });
       setMessage("Webpage URL saved successfully");
-      fetchSavedUrls(); // Fetch URLs again to update the list
+      fetchSavedUrls();
     } catch (error) {
       console.error("Error saving webpage:", error);
       setMessage("Error saving webpage.");
     } finally {
-      setLoading(false); // Hide loader
+      setLoading(false);
     }
 
     setUrl("");
     setTitle("");
   };
 
-  // Function to handle URL deletion
   const handleDelete = async (urlToDelete) => {
-    setLoading(true); // Show loading during deletion
+    setLoading(true);
     try {
-      const user = auth.currentUser; // Get the current authenticated user
+      const user = auth.currentUser;
       if (!user) return;
 
-      // Query Firestore to find the matching document in the 'links' subcollection
       const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
       querySnapshot.forEach(async (docSnapshot) => {
         if (docSnapshot.data().url === urlToDelete) {
@@ -107,17 +88,29 @@ const SideNav = () => {
         }
       });
 
-      fetchSavedUrls(); // Refresh the list after deletion
+      fetchSavedUrls();
     } catch (error) {
       console.error("Error deleting URL:", error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const filteredSidebarItems = sidebarItems.filter(item =>
+    item.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredUrls = urls.filter(saved =>
+    saved.url.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <>
       <MainNavbar />
-
-      {/* Sidebar Section */}
       <div style={styles.sidebar}>
         <h3>Navigation</h3>
         <div className="form-group">
@@ -129,7 +122,6 @@ const SideNav = () => {
             onChange={handleSearchChange}
           />
         </div>
-
         <ul className="list-group mt-3">
           {filteredSidebarItems.length > 0 ? (
             filteredSidebarItems.map((item, index) => (
@@ -143,11 +135,7 @@ const SideNav = () => {
         </ul>
       </div>
 
-      {/* Main Content */}
-      <div
-        className="container"
-        style={{ marginLeft: "270px", marginTop: "80px" }}
-      >
+      <div className="container" style={{ marginLeft: "270px", marginTop: "80px" }}>
         <h1>Paste Your Link</h1>
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="form-group">
@@ -181,12 +169,9 @@ const SideNav = () => {
           </button>
         </form>
 
-        {/* Display success or error message */}
         {message && (
           <div
-            className={`alert mt-4 ${
-              message.includes("Error") ? "alert-danger" : "alert-info"
-            }`}
+            className={`alert mt-4 ${message.includes("Error") ? "alert-danger" : "alert-info"}`}
             style={{ width: "50%" }}
             role="alert"
           >
@@ -194,10 +179,8 @@ const SideNav = () => {
           </div>
         )}
 
-        {/* Display loading spinner */}
         {loading && <Spinner animation="border" variant="primary" />}
 
-        {/* Display list of saved URLs */}
         <h2 className="mt-5">Saved URLs</h2>
         <ul className="list-group mt-3">
           {filteredUrls.map((saved, index) => (
