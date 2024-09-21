@@ -5,6 +5,7 @@ import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
 import dustbinIcon from "../../assets/dustbin.svg";
+import { useParams } from "react-router-dom";
 
 const Groups = () => {
     const [groupUrls, setGroupUrls] = useState([]);
@@ -17,7 +18,7 @@ const Groups = () => {
     const [processingUrl, setProcessingUrl] = useState(null);
     const [processingMessage, setProcessingMessage] = useState(null); // For processing message deletion
     const [currentUser, setCurrentUser] = useState(null); // Track authenticated user
-    const groupId = "groupId"; // Replace with actual groupId
+    const { groupId } = useParams();  // Replace with actual groupId
 
     // Fetch group URLs from Firestore
     const fetchGroupUrls = async (user) => {

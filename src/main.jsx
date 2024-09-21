@@ -13,6 +13,7 @@ import UserAccount from "./components/user/user.jsx";
 import Groups from "./main_pages/group/group.jsx";
 import Ai from "./main_pages/ai/ai.jsx";
 import MainHome from "./main_pages/mainhome/mainhome.jsx";
+import MainGroup from "./main_pages/maingroup/maingroup.jsx";
 
 const router = createBrowserRouter([
   {
@@ -48,6 +49,14 @@ const router = createBrowserRouter([
     ),
   },
   {
+    path: "maingroup",
+    element: (
+      <div>
+        <MainGroup />
+      </div>
+    ),
+  },
+  {
     path: "library",
     element: (
       <div>
@@ -56,7 +65,7 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: "groups",
+    path: "groups/:groupId",  // Dynamic route for individual group pages
     element: (
       <div>
         <Groups />

@@ -56,7 +56,7 @@ const MainNavbar = () => {
             <Nav.Link href="/library" className="mx-2">
               My Library
             </Nav.Link>
-            <Nav.Link href="/groups" className="mx-2">
+            <Nav.Link href="/maingroup" className="mx-2">
               My Groups
             </Nav.Link>
             <Nav.Link href="/ai" className="mx-2">
