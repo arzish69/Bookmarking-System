@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import MainNavbar from "../main_navbar";
-import { collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, orderBy, query } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, serverTimestamp, orderBy, query } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
@@ -19,6 +19,7 @@ const Groups = () => {
     const [processingMessage, setProcessingMessage] = useState(null); // For processing message deletion
     const [currentUser, setCurrentUser] = useState(null); // Track authenticated user
     const { groupId } = useParams();  // Replace with actual groupId
+    const [groupName, setGroupName] = useState("");
 
     // Fetch group URLs from Firestore
     const fetchGroupUrls = async (user) => {
@@ -68,6 +69,24 @@ const Groups = () => {
         }
     };
 
+    const fetchGroupName = async () => {
+        setLoading(true);
+        try {
+            const groupRef = doc(db, "groups", groupId);
+            const groupDoc = await getDoc(groupRef);
+
+            if (groupDoc.exists()) {
+                setGroupName(groupDoc.data().groupName);
+            } else {
+                console.error("Group not found");
+            }
+        } catch (error) {
+            console.error("Error fetching group name:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Set up onAuthStateChanged listener to detect when user logs in
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -75,6 +94,7 @@ const Groups = () => {
                 setCurrentUser(user);  // Set the logged-in user
                 fetchGroupUrls(user);  // Fetch URLs after authentication
                 fetchGroupMessages(user); // Fetch messages after authentication
+                fetchGroupName();
             } else {
                 setCurrentUser(null);  // User is not logged in
                 console.log("No user is logged in.");
@@ -159,7 +179,7 @@ const Groups = () => {
         <>
             <MainNavbar />
             <div className="container mt-4" style={{ paddingTop: "60px", paddingBottom: "60px" }}>
-                <h1>My Group</h1>
+                <h1>{loading ? "Loading..." : groupName}</h1>
 
                 {loading ? (
                     <Spinner animation="border" />
