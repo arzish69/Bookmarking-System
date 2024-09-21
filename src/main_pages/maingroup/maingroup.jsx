@@ -4,6 +4,7 @@ import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import Spinner from "react-bootstrap/Spinner";
+import MainNavbar from "../main_navbar";
 
 const MainGroup = () => {
   const [groups, setGroups] = useState([]);
@@ -117,6 +118,8 @@ const MainGroup = () => {
   }, []);
 
   return (
+    <>
+    <MainNavbar />
     <div className="container mt-4" style={{ paddingTop: "60px" }}>
       <h1>My Groups</h1>
 
@@ -167,6 +170,7 @@ const MainGroup = () => {
         </>
       )}
     </div>
+    </>
   );
 };
 
