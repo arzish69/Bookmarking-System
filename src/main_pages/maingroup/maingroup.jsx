@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, getDoc, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, addDoc, getDoc, getDocs, updateDoc, doc, arrayRemove } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -40,7 +40,7 @@ const MainGroup = () => {
   // Create a new group
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
-  
+
     setLoading(true);
     try {
       const newGroup = await addDoc(collection(db, "groups"), {
@@ -49,18 +49,18 @@ const MainGroup = () => {
         description: "This is a new group",
         createdBy: currentUser.uid,
       });
-  
+
       // Update the user's group list
       const userRef = doc(db, "users", currentUser.uid);
       const userDoc = await getDoc(userRef);
-  
+
       if (userDoc.exists()) {
         const userGroups = userDoc.data().groups || [];
         await updateDoc(userRef, {
           groups: [...userGroups, newGroup.id],
         });
       }
-  
+
       // Refresh the group list
       fetchUserGroups(currentUser.uid);
       setNewGroupName("");
@@ -69,7 +69,33 @@ const MainGroup = () => {
     } finally {
       setLoading(false);
     }
-  };  
+  };
+
+  // Leave a group
+  const handleLeaveGroup = async (groupId) => {
+    setLoading(true);
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+
+      // Remove the groupId from the user's 'groups' array
+      await updateDoc(userRef, {
+        groups: arrayRemove(groupId),
+      });
+
+      // Remove the user's UID from the group's 'members' array
+      const groupRef = doc(db, "groups", groupId);
+      await updateDoc(groupRef, {
+        members: arrayRemove(currentUser.uid),
+      });
+
+      // Refresh the group list
+      fetchUserGroups(currentUser.uid);
+    } catch (error) {
+      console.error("Error leaving group:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle navigating to a specific group page
   const handleGroupClick = (groupId) => {
@@ -104,10 +130,21 @@ const MainGroup = () => {
               <li className="list-group-item">You are not part of any groups yet.</li>
             ) : (
               groups.map((group) => (
-                <li key={group.id} className="list-group-item" onClick={() => handleGroupClick(group.id)}>
-                  <strong>{group.groupName}</strong>
-                  <br />
-                  <small>{group.description}</small>
+                <li key={group.id} className="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong onClick={() => handleGroupClick(group.id)} style={{ cursor: "pointer" }}>
+                      {group.groupName}
+                    </strong>
+                    <br />
+                    <small>{group.description}</small>
+                  </div>
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => handleLeaveGroup(group.id)}
+                    disabled={loading}
+                  >
+                    Leave Group
+                  </button>
                 </li>
               ))
             )}
