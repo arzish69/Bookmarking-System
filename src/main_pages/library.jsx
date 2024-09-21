@@ -3,7 +3,8 @@ import MainNavbar from "./main_navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; 
 import { db, auth } from "../firebaseConfig"; 
-import Spinner from "react-bootstrap/Spinner"; 
+import Spinner from "react-bootstrap/Spinner";
+import dustbinIcon from "../assets/dustbin.svg"; // Adjust the path to your SVG accordingly
 
 const SideNav = () => {
   const [url, setUrl] = useState("");
@@ -212,16 +213,16 @@ const SideNav = () => {
               {processingUrl === saved.url && (
                 <Spinner animation="border" size="sm" variant="primary" className="ml-2" />
               )}
-              <button
-                className="btn btn-danger btn-sm"
+              <img
+                src={dustbinIcon}
+                alt="Delete"
+                style={{ width: "20px", cursor: "pointer" }} // Adjust size if needed
                 onClick={() => handleDelete(saved.url)}
-                disabled={processingUrl === saved.url}
-              >
-                Delete
-              </button>
+                disabled={processingUrl === saved.url} // Disabled condition
+              />
             </li>
           ))}
-        </ul>
+      </ul>
       </div>
     </>
   );

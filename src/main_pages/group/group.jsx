@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import MainNavbar from "../main_navbar";
-import { collection, addDoc, getDocs, serverTimestamp, orderBy, query } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, orderBy, query } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
 import Spinner from "react-bootstrap/Spinner";
+import dustbinIcon from "../../assets/dustbin.svg"
 
 const Groups = () => {
     const [groupUrls, setGroupUrls] = useState([]);
@@ -12,6 +13,7 @@ const Groups = () => {
     const [groupMessages, setGroupMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(false);
+    const [processingUrl, setProcessingUrl] = useState(null); 
     const groupId = "groupId"; // Set your groupId here
 
     // Fetch group URLs from Firestore
@@ -96,6 +98,26 @@ const Groups = () => {
         }
     };
 
+    // Delete shared URL
+    const handleDeleteUrl = async (urlId) => {
+        try {
+            await deleteDoc(doc(db, "groups", groupId, "sharedUrls", urlId));
+            await fetchGroupUrls(); // Refresh the URLs after deletion
+        } catch (error) {
+            console.error("Error deleting URL:", error);
+        }
+    };
+
+    // Delete chat message
+    const handleDeleteMessage = async (messageId) => {
+        try {
+            await deleteDoc(doc(db, "groups", groupId, "messages", messageId));
+            await fetchGroupMessages(); // Refresh the messages after deletion
+        } catch (error) {
+            console.error("Error deleting message:", error);
+        }
+    };
+
     // Fetch data when component mounts or groupId changes
     useEffect(() => {
         fetchGroupUrls();
@@ -105,7 +127,7 @@ const Groups = () => {
     return (
         <>
             <MainNavbar />
-            <div className="container mt-4" style={{ paddingTop: "60px" }}>
+            <div className="container mt-4" style={{ paddingTop: "60px", paddingBottom: "60px" }}>
                 <h1>My Group</h1>
 
                 {/* Form to share a URL */}
@@ -142,34 +164,53 @@ const Groups = () => {
                 {message && <div className="alert alert-info mt-3">{message}</div>}
 
                 {/* Display shared URLs */}
-                <h3 className="mt-5">Shared URLs</h3>
-                {loading ? (
-                    <Spinner animation="border" />
-                ) : (
-                    <ul className="list-group mt-3">
-                        {groupUrls.map((sharedUrl) => (
-                            <li key={sharedUrl.id} className="list-group-item">
-                                <a href={sharedUrl.url} target="_blank" rel="noopener noreferrer">
-                                    {sharedUrl.title || sharedUrl.url}
-                                </a>
-                                <br />
-                                <small>Shared by: {sharedUrl.sharedBy}</small>
-                                <br />
-                                <small>Timestamp: {new Date(sharedUrl.timestamp?.seconds * 1000).toLocaleString()}</small>
-                            </li>
-                        ))}
-                    </ul>
-                )}
+                <h2 className="mt-5">Shared URLs</h2>
+                <ul className="list-group mt-3">
+                    {groupUrls.map((sharedUrl) => (
+                        <li key={sharedUrl.id} className="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <a href={sharedUrl.url} target="_blank" rel="noopener noreferrer">
+                            {sharedUrl.title || sharedUrl.url}
+                            </a>
+                            <br />
+                            <small>Shared by: {sharedUrl.sharedBy}</small>
+                            <br />
+                            <small>Timestamp: {new Date(sharedUrl.timestamp?.seconds * 1000).toLocaleString()}</small>
+                        </div>
+                        <div className="d-flex align-items-center">
+                            {processingUrl === sharedUrl.id && (
+                            <Spinner animation="border" size="sm" variant="primary" className="ml-2" />
+                            )}
+                            <img
+                            src={dustbinIcon}
+                            alt="Delete"
+                            style={{ width: "20px", cursor: "pointer" }} // Adjust size as needed
+                            onClick={() => handleDeleteUrl(sharedUrl.id)}
+                            disabled={processingUrl === sharedUrl.id} // Disabled condition
+                            />
+                        </div>
+                        </li>
+                    ))}
+                </ul>
 
                 {/* Chat section */}
                 <div className="mt-5">
-                    <h3>Group Chat</h3>
+                    <h2>Group Chat</h2>
                     <ul className="list-group mt-3">
                         {groupMessages.map((msg) => (
-                            <li key={msg.id} className="list-group-item">
+                            <li key={msg.id} className="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
                                 <strong>{msg.sentBy}:</strong> {msg.message}
                                 <br />
                                 <small>Timestamp: {new Date(msg.timestamp?.seconds * 1000).toLocaleString()}</small>
+                            </div>
+                            <img
+                                src={dustbinIcon}
+                                alt="Delete"
+                                style={{ width: "20px", cursor: "pointer" }} // Adjust size as needed
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                disabled={processingUrl === msg.id} // Disabled condition (if needed)
+                            />
                             </li>
                         ))}
                     </ul>
