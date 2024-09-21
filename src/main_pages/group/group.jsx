@@ -5,7 +5,9 @@ import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
 import dustbinIcon from "../../assets/dustbin.svg";
+import gearIcon from "../../assets/gear.svg";
 import { useParams } from "react-router-dom";
+import '../../main_pages/group/group.css';
 
 const Groups = () => {
     const [groupUrls, setGroupUrls] = useState([]);
@@ -20,6 +22,8 @@ const Groups = () => {
     const [currentUser, setCurrentUser] = useState(null); // Track authenticated user
     const { groupId } = useParams();  // Replace with actual groupId
     const [groupName, setGroupName] = useState("");
+    const [showOptions, setShowOptions] = useState(false); // To show/hide the buttons
+    const [gearSpinning, setGearSpinning] = useState(false); // To control the gear spin
 
     // Fetch group URLs from Firestore
     const fetchGroupUrls = async (user) => {
@@ -105,6 +109,15 @@ const Groups = () => {
         return () => unsubscribe();  // Cleanup listener on unmount
     }, [groupId]);
 
+     // Handle gear click to toggle options
+     const handleGearClick = () => {
+        setGearSpinning(true); // Start spinning the gear
+        setTimeout(() => {
+            setGearSpinning(false); // Stop spinning after animation
+            setShowOptions((prev) => !prev); // Toggle button visibility
+        }, 500); // Spin duration (in ms)
+    };
+
     // Share URL with group
     const handleShareUrl = async (e) => {
         e.preventDefault();
@@ -179,7 +192,24 @@ const Groups = () => {
         <>
             <MainNavbar />
             <div className="container mt-4" style={{ paddingTop: "60px", paddingBottom: "60px" }}>
-                <h1>{loading ? "Loading..." : groupName}</h1>
+            <div className="d-flex align-items-center">
+                    <h1>{loading ? "Loading..." : groupName}</h1>
+                    <img
+                        src={gearIcon}
+                        alt="Gear Icon"
+                        className={`ml-3 ${gearSpinning ? "spinning" : ""}`} // Add spinning class when gear is clicked
+                        style={{ width: "30px", cursor: "pointer", marginLeft: "20px" }} // Add margin to move the gear to the right
+                        onClick={handleGearClick}
+                    />
+                    {/* Options will roll out when the gear is clicked, moved to the right of the gear */}
+                    {showOptions && (
+                        <div className="d-flex button-container" style={{ marginLeft: "15px" }}>
+                            <button className="btn btn-primary mr-2" style={{ marginRight: "10px" }}>Invite a member</button>
+                            <button className="btn btn-danger mr-2" style={{ marginRight: "10px" }}>Leave Group</button>
+                            <button className="btn btn-secondary">Group settings</button>
+                        </div>
+                    )}
+                </div>
 
                 {loading ? (
                     <Spinner animation="border" />

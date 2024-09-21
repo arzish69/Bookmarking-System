@@ -7,7 +7,7 @@ h2 {
     margin-bottom: 20px;
     font-size: 28px;
     font-weight: bold;
-    text-align: center;
+    text-align:left;
 }
 
 /* Group box styling */
@@ -73,4 +73,30 @@ h2 {
 
 .chat-input button:hover {
     background-color: #0056b3;
+}
+
+.spinning {
+    animation: spin 0.5s linear;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.button-container button {
+    opacity: 0;
+    transform: translateY(-10px);
+    animation: rollOut 0.5s forwards;
+}
+
+@keyframes rollOut {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
