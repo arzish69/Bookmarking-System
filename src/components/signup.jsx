@@ -3,31 +3,37 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebaseConfig"; // Import Firebase auth and Firestore
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore"; // Firestore methods
+import "./signup.css"; // Import the CSS file for animations
 
 const SignUp = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [repeatPassword, setRepeatPassword] = useState(""); // State for repeat password
+  const [repeatPassword, setRepeatPassword] = useState("");
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [error, setError] = useState({ type: "", message: "" }); // To handle different error messages
+  const [shake, setShake] = useState(false); // For shake animation
   const navigate = useNavigate();
 
-  const toggleForm = () => {
-    setIsLogin(!isLogin);
+  const toggleForm = (formType) => {
+    setIsLogin(formType === "login");
+    setError({ type: "", message: "" }); // Reset errors when toggling
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError({ type: "", message: "" }); // Reset errors before submission
+
     try {
       if (isLogin) {
         // Handle login
         await signInWithEmailAndPassword(auth, email, password);
-        navigate("/library");
+        navigate("/mainhome"); // Navigate to /mainhome upon success
       } else {
         // Handle signup
         if (password !== repeatPassword) {
-          alert("Passwords do not match");
+          setError({ type: "passwordMismatch", message: "Passwords do not match" });
           return;
         }
 
@@ -40,19 +46,45 @@ const SignUp = () => {
           name: name,
           username: username,
           email: email,
-        }, { merge: true });  // Merge to keep existing data
+        });
 
-        navigate("/library");
+        navigate("/mainhome");
       }
     } catch (error) {
-      console.error("Error:", error.message);
-      alert(error.message);
+      setShake(true); // Trigger the shake animation
+      if (error.code === "auth/wrong-password") {
+        setError({ type: "password", message: "Wrong password" });
+      } else if (error.code === "auth/user-not-found") {
+        setError({ type: "email", message: "Username not found" });
+      } else {
+        setError({ type: "other", message: error.message });
+      }
+
+      // Remove the shake animation after a brief period
+      setTimeout(() => setShake(false), 500);
     }
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
-      <div className="card p-4" style={{ width: "400px" }}>
+    <div className="d-flex flex-column justify-content-center align-items-center vh-100">
+      <div className="toggle-buttons mb-3">
+        <button
+          type="button"
+          className={`btn ${isLogin ? "btn-primary" : "btn-secondary"} mx-2`}
+          onClick={() => toggleForm("login")}
+        >
+          Login
+        </button>
+        <button
+          type="button"
+          className={`btn ${!isLogin ? "btn-primary" : "btn-secondary"} mx-2`}
+          onClick={() => toggleForm("register")}
+        >
+          Register
+        </button>
+      </div>
+
+      <div className={`card p-4 ${shake ? "shake" : ""}`} style={{ width: "400px" }}>
         <div className="text-center mb-3">
           <h2>{isLogin ? "Login" : "Register"}</h2>
         </div>
@@ -63,39 +95,27 @@ const SignUp = () => {
               <label htmlFor="loginEmail" className="form-label">Email address</label>
               <input
                 type="email"
-                className="form-control"
+                className={`form-control ${error.type === "email" ? "is-invalid" : ""}`}
                 id="loginEmail"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
+              {error.type === "email" && <div className="text-danger small">{error.message}</div>}
             </div>
             <div className="mb-3">
               <label htmlFor="loginPassword" className="form-label">Password</label>
               <input
                 type="password"
-                className="form-control"
+                className={`form-control ${error.type === "password" ? "is-invalid" : ""}`}
                 id="loginPassword"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-            </div>
-            <div className="d-flex justify-content-between">
-              <div className="form-check">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id="rememberMe"
-                />
-                <label className="form-check-label" htmlFor="rememberMe">Remember me</label>
-              </div>
-              <a href="#!" className="text-decoration-none">Forgot password?</a>
+              {error.type === "password" && <div className="text-danger small">{error.message}</div>}
             </div>
             <button type="submit" className="btn btn-primary w-100 mt-3">Sign in</button>
-            <div className="text-center mt-3">
-              <p>Not a member? <button type="button" className="btn btn-link" onClick={toggleForm}>Register</button></p>
-            </div>
           </form>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -125,23 +145,25 @@ const SignUp = () => {
               <label htmlFor="registerEmail" className="form-label">Email address</label>
               <input
                 type="email"
-                className="form-control"
+                className={`form-control ${error.type === "email" ? "is-invalid" : ""}`}
                 id="registerEmail"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
+              {error.type === "email" && <div className="text-danger small">{error.message}</div>}
             </div>
             <div className="mb-3">
               <label htmlFor="registerPassword" className="form-label">Password</label>
               <input
                 type="password"
-                className="form-control"
+                className={`form-control ${error.type === "password" ? "is-invalid" : ""}`}
                 id="registerPassword"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              {error.type === "password" && <div className="text-danger small">{error.message}</div>}
             </div>
             <div className="mb-3">
               <label htmlFor="registerRepeatPassword" className="form-label">Repeat password</label>
@@ -154,19 +176,7 @@ const SignUp = () => {
                 required
               />
             </div>
-            <div className="form-check mb-3">
-              <input
-                type="checkbox"
-                className="form-check-input"
-                id="agreeTerms"
-                required
-              />
-              <label className="form-check-label" htmlFor="agreeTerms">I agree to the terms and conditions</label>
-            </div>
             <button type="submit" className="btn btn-primary w-100 mt-3">Sign up</button>
-            <div className="text-center mt-3">
-              <p>Already a member? <button type="button" className="btn btn-link" onClick={toggleForm}>Login</button></p>
-            </div>
           </form>
         )}
       </div>

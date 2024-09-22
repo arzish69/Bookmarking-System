@@ -1,0 +1,23 @@
+/* CSS for shake animation */
+.shake {
+    animation: shake 0.3s;
+    border: 2px solid red;
+  }
+  
+  @keyframes shake {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    25%, 75% {
+      transform: translateX(-5px);
+    }
+    50% {
+      transform: translateX(5px);
+    }
+  }
+  
+  /* Custom styling for invalid inputs */
+  .is-invalid {
+    border-color: red;
+  }
+  

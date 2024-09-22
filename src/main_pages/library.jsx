@@ -10,7 +10,7 @@ const SideNav = () => {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState(""); 
   const [message, setMessage] = useState("");
-  const [urls, setUrls] = useState(JSON.parse(localStorage.getItem("savedUrls")) || []);
+  const [urls, setUrls] = useState([]); // Initially, set as an empty array
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [processingUrl, setProcessingUrl] = useState(null); 
@@ -23,20 +23,31 @@ const SideNav = () => {
   ];
 
   useEffect(() => {
-    fetchSavedUrls();
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) {
+        // Fetch URLs for the logged-in user
+        fetchSavedUrls(user);
+      } else {
+        // Clear state when logged out
+        setUrls([]);
+        localStorage.removeItem("savedUrls");
+      }
+    });
+
+    // Cleanup the subscription
+    return () => unsubscribe();
   }, []);
 
-  // Function to fetch saved URLs from Firestore
-  const fetchSavedUrls = async () => {
+  // Function to fetch saved URLs from Firestore for the current user
+  const fetchSavedUrls = async (user) => {
     setLoading(true);
     try {
-      const user = auth.currentUser;
-      if (!user) return;
+      if (!user) return; // Ensure the user exists
 
       const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
-      const savedUrls = querySnapshot.docs.map((doc) => doc.data());
+      const savedUrls = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
       setUrls(savedUrls);
-      localStorage.setItem("savedUrls", JSON.stringify(savedUrls));
+      localStorage.setItem("savedUrls", JSON.stringify(savedUrls)); // Store in localStorage
     } catch (error) {
       console.error("Error fetching URLs:", error);
       setMessage("Error fetching URLs.");
@@ -77,7 +88,7 @@ const SideNav = () => {
       });
 
       setMessage("Webpage URL saved successfully.");
-      fetchSavedUrls();
+      fetchSavedUrls(user); // Fetch updated URLs for the current user
     } catch (error) {
       console.error("Error saving webpage:", error);
       setMessage("Error saving webpage.");
@@ -101,7 +112,7 @@ const SideNav = () => {
       if (docToDelete) {
         await deleteDoc(doc(db, "users", user.uid, "links", docToDelete.id));
         setMessage("URL deleted successfully.");
-        fetchSavedUrls();
+        fetchSavedUrls(user);
       } else {
         setMessage("URL not found.");
       }
@@ -222,7 +233,7 @@ const SideNav = () => {
               />
             </li>
           ))}
-      </ul>
+        </ul>
       </div>
     </>
   );
