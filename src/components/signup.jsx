@@ -52,13 +52,7 @@ const SignUp = () => {
       }
     } catch (error) {
       setShake(true); // Trigger the shake animation
-      if (error.code === "auth/wrong-password") {
-        setError({ type: "password", message: "Wrong password" });
-      } else if (error.code === "auth/user-not-found") {
-        setError({ type: "email", message: "Username not found" });
-      } else {
-        setError({ type: "other", message: error.message });
-      }
+      setError({ type: "password", message: "Invalid Credentials" });
 
       // Remove the shake animation after a brief period
       setTimeout(() => setShake(false), 500);
@@ -101,7 +95,6 @@ const SignUp = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
-              {error.type === "email" && <div className="text-danger small">{error.message}</div>}
             </div>
             <div className="mb-3">
               <label htmlFor="loginPassword" className="form-label">Password</label>
