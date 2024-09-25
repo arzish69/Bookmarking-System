@@ -1,10 +1,10 @@
-// src/Navbar.js
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap"; 
 import { auth } from "../firebaseConfig"; 
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import BellIcon from "../assets/bell.svg"; // Import your bell icon
 
 const MainNavbar = () => {
   const [userName, setUserName] = useState(""); 
@@ -63,7 +63,20 @@ const MainNavbar = () => {
               Summarizer
             </Nav.Link>
           </Nav>
-          <Nav className="ms-auto">
+          <Nav className="ms-auto d-flex align-items-center">
+            {/* Bell Icon Button */}
+            <button
+              className="btn"
+              style={{ border: "none", background: "transparent", padding: 0, marginRight: "10px" }}
+            >
+              <img
+                src={BellIcon}
+                alt="Notifications"
+                style={{ width: "24px", height: "24px" }}
+              />
+            </button>
+
+            {/* User Profile with Username */}
             <NavDropdown
               title={
                 <>
