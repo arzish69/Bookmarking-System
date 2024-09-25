@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Navbar, Nav, NavDropdown, Container, Modal, Button } from "react-bootstrap"; 
+import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap"; 
 import { auth } from "../firebaseConfig"; 
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -9,7 +9,7 @@ import BellIcon from "../assets/bell.svg"; // Import your bell icon
 const MainNavbar = () => {
   const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true); // Add loading state
-  const [showNotificationModal, setShowNotificationModal] = useState(false); // State to control modal
+  const [showNotificationBox, setShowNotificationBox] = useState(false); // State to control notification box visibility
   const db = getFirestore();
 
   useEffect(() => {
@@ -44,9 +44,9 @@ const MainNavbar = () => {
     return () => unsubscribe(); // Cleanup the subscription on unmount
   }, [db]);
 
-  // Function to handle modal show/hide
-  const handleModalToggle = () => {
-    setShowNotificationModal(!showNotificationModal);
+  // Function to toggle the notification box visibility
+  const handleNotificationToggle = () => {
+    setShowNotificationBox(!showNotificationBox);
   };
 
   return (
@@ -70,11 +70,11 @@ const MainNavbar = () => {
                 Summarizer
               </Nav.Link>
             </Nav>
-            <Nav className="ms-auto d-flex align-items-center">
+            <Nav className="ms-auto d-flex align-items-center position-relative">
               {/* Bell Icon Button */}
               <button
                 className="btn"
-                onClick={handleModalToggle} // Open modal when clicked
+                onClick={handleNotificationToggle} // Toggle notification box
                 style={{ border: "none", background: "transparent", padding: 0, marginRight: "10px" }}
               >
                 <img
@@ -83,6 +83,31 @@ const MainNavbar = () => {
                   style={{ width: "24px", height: "24px" }}
                 />
               </button>
+
+              {/* Notification Box */}
+              {showNotificationBox && (
+                <div
+                  className="notification-box"
+                  style={{
+                    position: "absolute",
+                    top: "40px", // Adjust positioning to be just below the bell icon
+                    right: "0",
+                    width: "300px",
+                    maxHeight: "400px",
+                    backgroundColor: "white",
+                    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                    borderRadius: "8px",
+                    zIndex: 1000,
+                    overflowY: "auto",
+                    padding: "10px",
+                  }}
+                >
+                  <h5>Notifications</h5>
+                  <p>This is a notification box!</p>
+                  <p>You can add dynamic notifications here.</p>
+                  <p>More content can be added and will scroll if it exceeds the height.</p>
+                </div>
+              )}
 
               {/* User Profile with Username */}
               <NavDropdown
@@ -107,29 +132,6 @@ const MainNavbar = () => {
           </Navbar.Collapse>
         </Container>
       </Navbar>
-
-      {/* Notification Modal */}
-      <Modal
-        show={showNotificationModal}
-        onHide={handleModalToggle}
-        centered
-        size="lg" // You can customize the size as needed
-        style={{ maxHeight: "80vh" }} // Ensure it doesn't take too much vertical space
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Notifications</Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ height: "400px", overflowY: "auto" }}> {/* Adjust the height */}
-          <p>This is a tall rectangular notification window!</p>
-          <p>Here you can list all your notifications or any other content you'd like.</p>
-          <p>More notifications can be added here. This can scroll if the content exceeds the height.</p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleModalToggle}>
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </>
   );
 };
