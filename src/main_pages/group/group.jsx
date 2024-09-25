@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import MainNavbar from "../main_navbar";
-import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, serverTimestamp, orderBy, query } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, serverTimestamp, orderBy, query, updateDoc, arrayRemove } from "firebase/firestore"; // Add updateDoc, arrayRemove for handling leave group
 import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
+import Modal from "react-bootstrap/Modal"; // Import Modal for confirmation
+import Button from "react-bootstrap/Button"; // Import Button for modal actions
 import dustbinIcon from "../../assets/dustbin.svg";
 import gearIcon from "../../assets/gear.svg";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom"; // Use navigate to redirect
 import '../../main_pages/group/group.css';
 
 const Groups = () => {
@@ -24,6 +26,9 @@ const Groups = () => {
     const [groupName, setGroupName] = useState("");
     const [showOptions, setShowOptions] = useState(false); // To show/hide the buttons
     const [gearSpinning, setGearSpinning] = useState(false); // To control the gear spin
+    const [showLeaveModal, setShowLeaveModal] = useState(false); // State for showing the leave confirmation modal
+    const [leavingGroup, setLeavingGroup] = useState(false); // State for processing leave group
+    const navigate = useNavigate();
 
     // Fetch group URLs from Firestore
     const fetchGroupUrls = async (user) => {
@@ -109,8 +114,8 @@ const Groups = () => {
         return () => unsubscribe();  // Cleanup listener on unmount
     }, [groupId]);
 
-     // Handle gear click to toggle options
-     const handleGearClick = () => {
+    // Handle gear click to toggle options
+    const handleGearClick = () => {
         setGearSpinning(true); // Start spinning the gear
         setTimeout(() => {
             setGearSpinning(false); // Stop spinning after animation
@@ -188,6 +193,30 @@ const Groups = () => {
         }
     };
 
+    // Handle leave group functionality
+    const handleLeaveGroup = async () => {
+        setLeavingGroup(true);
+        try {
+            // Remove the groupId from the user's 'groups' array
+            await updateDoc(doc(db, "users", currentUser.uid), {
+                groups: arrayRemove(groupId),
+            });
+
+            // Remove the user from the group's 'members' array
+            await updateDoc(doc(db, "groups", groupId), {
+                members: arrayRemove(currentUser.uid),
+            });
+
+            // After leaving, navigate back to the main group page
+            navigate("/maingroup");
+        } catch (error) {
+            console.error("Error leaving group:", error);
+        } finally {
+            setLeavingGroup(false);
+            setShowLeaveModal(false); // Close the modal
+        }
+    };
+
     return (
         <>
             <MainNavbar />
@@ -205,7 +234,13 @@ const Groups = () => {
                     {showOptions && (
                         <div className="d-flex button-container" style={{ marginLeft: "15px" }}>
                             <button className="btn btn-primary mr-2" style={{ marginRight: "10px" }}>Invite a member</button>
-                            <button className="btn btn-danger mr-2" style={{ marginRight: "10px" }}>Leave Group</button>
+                            <button
+                                className="btn btn-danger mr-2"
+                                style={{ marginRight: "10px" }}
+                                onClick={() => setShowLeaveModal(true)} // Open modal when clicked
+                            >
+                                Leave Group
+                            </button>
                             <button className="btn btn-secondary">Group settings</button>
                         </div>
                     )}
@@ -328,6 +363,27 @@ const Groups = () => {
                     </>
                 )}
             </div>
+
+            {/* Leave Group Confirmation Modal */}
+            <Modal show={showLeaveModal} onHide={() => setShowLeaveModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirm Leaving Group</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>Are you sure you want to leave this group?</p>
+                    <p>
+                        <strong>Warning:</strong> All chat messages, URLs, and other group content will be lost and cannot be recovered.
+                    </p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowLeaveModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button variant="danger" onClick={handleLeaveGroup} disabled={leavingGroup}>
+                        {leavingGroup ? <Spinner animation="border" size="sm" /> : "Leave Group"}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </>
     );
 };
