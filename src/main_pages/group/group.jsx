@@ -22,6 +22,7 @@ const Groups = () => {
     const [processingUrl, setProcessingUrl] = useState(null);
     const [processingMessage, setProcessingMessage] = useState(null); // For processing message deletion
     const [currentUser, setCurrentUser] = useState(null); // Track authenticated user
+    const [username, setUsername] = useState("");  // Store username separately
     const { groupId } = useParams();  // Replace with actual groupId
     const [groupName, setGroupName] = useState("");
     const [showOptions, setShowOptions] = useState(false); // To show/hide the buttons
@@ -96,12 +97,30 @@ const Groups = () => {
         }
     };
 
+    const fetchUserDetails = async (user) => {
+        if (user) {
+            try {
+                const userDocRef = doc(db, "users", user.uid); // Reference to the user's document
+                const userDoc = await getDoc(userDocRef); // Fetch the document
+
+                if (userDoc.exists()) {
+                    setUsername(userDoc.data().username);  // Set the username from Firestore
+                } else {
+                    console.error("No such document for the user in Firestore!");
+                }
+            } catch (error) {
+                console.error("Error fetching user details:", error);
+            }
+        }
+    };
+
     // Set up onAuthStateChanged listener to detect when user logs in
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
                 setCurrentUser(user);  // Set the logged-in user
                 fetchGroupUrls(user);  // Fetch URLs after authentication
+                fetchUserDetails(user);
                 fetchGroupMessages(user); // Fetch messages after authentication
                 fetchGroupName();
             } else {
@@ -133,7 +152,7 @@ const Groups = () => {
             await addDoc(collection(db, "groups", groupId, "sharedUrls"), {
                 url,
                 title,
-                sharedBy: currentUser.email,
+                sharedBy: username,
                 timestamp: serverTimestamp(),
             });
             setMessage("URL shared with group.");
@@ -170,7 +189,7 @@ const Groups = () => {
 
             await addDoc(collection(db, "groups", groupId, "messages"), {
                 message: newMessage,
-                sentBy: currentUser.email,
+                sentBy: username,
                 timestamp: serverTimestamp(),
             });
             setNewMessage("");
