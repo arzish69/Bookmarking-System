@@ -5,11 +5,13 @@ import { auth } from "../firebaseConfig";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import BellIcon from "../assets/bell.svg"; // Import your bell icon
+import Notify from "../components/notify";
 
 const MainNavbar = () => {
   const [userName, setUserName] = useState(""); 
-  const [loading, setLoading] = useState(true); // Add loading state
-  const [showNotificationBox, setShowNotificationBox] = useState(false); // State to control notification box visibility
+  const [loading, setLoading] = useState(true); 
+  const [showNotificationBox, setShowNotificationBox] = useState(false); 
+  const [currentUser, setCurrentUser] = useState(null); // Store the current authenticated user
   const db = getFirestore();
 
   useEffect(() => {
@@ -102,10 +104,8 @@ const MainNavbar = () => {
                     padding: "10px",
                   }}
                 >
-                  <h5>Notifications</h5>
-                  <p>This is a notification box!</p>
-                  <p>You can add dynamic notifications here.</p>
-                  <p>More content can be added and will scroll if it exceeds the height.</p>
+                  {/* Call Notify Component Here */}
+                  <Notify currentUser={currentUser} />
                 </div>
               )}
 
@@ -132,6 +132,8 @@ const MainNavbar = () => {
           </Navbar.Collapse>
         </Container>
       </Navbar>
+
+
     </>
   );
 };

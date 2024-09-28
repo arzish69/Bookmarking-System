@@ -6,6 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal"; // Import Modal for confirmation
 import Button from "react-bootstrap/Button"; // Import Button for modal actions
+import InviteMemberModal from "../../components/InviteMemberModel";
 import dustbinIcon from "../../assets/dustbin.svg";
 import gearIcon from "../../assets/gear.svg";
 import { useParams, useNavigate } from "react-router-dom"; // Use navigate to redirect
@@ -27,6 +28,7 @@ const Groups = () => {
     const [groupName, setGroupName] = useState("");
     const [showOptions, setShowOptions] = useState(false); // To show/hide the buttons
     const [gearSpinning, setGearSpinning] = useState(false); // To control the gear spin
+    const [showInviteModal, setShowInviteModal] = useState(false); // State to control invite modal visibility
     const [showLeaveModal, setShowLeaveModal] = useState(false); // State for showing the leave confirmation modal
     const [leavingGroup, setLeavingGroup] = useState(false); // State for processing leave group
     const navigate = useNavigate();
@@ -251,8 +253,10 @@ const Groups = () => {
                     />
                     {/* Options will roll out when the gear is clicked, moved to the right of the gear */}
                     {showOptions && (
-                        <div className="d-flex button-container" style={{ marginLeft: "15px" }}>
-                            <button className="btn btn-primary mr-2" style={{ marginRight: "10px" }}>Invite a member</button>
+                        <div className="d-flex button-container" style={{ marginLeft: "15px" }}>                           
+                            <button className="btn btn-primary mr-2" style={{ marginRight: "10px" }} onClick={() => setShowInviteModal(true)}>
+                                Invite a member
+                            </button>
                             <button
                                 className="btn btn-danger mr-2"
                                 style={{ marginRight: "10px" }}
@@ -382,6 +386,14 @@ const Groups = () => {
                     </>
                 )}
             </div>
+
+            <InviteMemberModal
+                show={showInviteModal}
+                handleClose={() => setShowInviteModal(false)}
+                groupId={groupId}
+                groupName={groupName}
+                inviterId={currentUser?.uid}
+            />
 
             {/* Leave Group Confirmation Modal */}
             <Modal show={showLeaveModal} onHide={() => setShowLeaveModal(false)} centered>
