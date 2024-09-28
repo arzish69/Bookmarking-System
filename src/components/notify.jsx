@@ -127,7 +127,7 @@ const Notify = () => {
             pendingInvitations.map((invitation) => (
               <ListGroup.Item key={invitation.id} className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h6>You're invited in the group "{invitation.groupName}"</h6>
+                  <h6>You're invited in the group "{invitation.groupName}" by {invitation.invitedBy}</h6>
                 </div>
                 <div>
                   <Button

@@ -1,13 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal, Button, Spinner } from "react-bootstrap";
-import { collection, query, where, getDocs, getDoc, addDoc, doc, serverTimestamp, writeBatch } from "firebase/firestore";
-import { db } from "../firebaseConfig"; // Adjust the import path according to your structure
+import { collection, query, where, getDocs, getDoc, setDoc, doc, serverTimestamp } from "firebase/firestore";
+import { db, auth } from "../firebaseConfig"; // Adjust the import path according to your structure
 
 const InviteMemberModal = ({ show, handleClose, groupId, groupName, inviterId }) => {
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [inviterUsername, setInviterUsername] = useState(""); // Store the inviter's username
+
+  // Fetch the inviter's username from Firestore or auth.currentUser
+  useEffect(() => {
+    const fetchInviterUsername = async () => {
+      if (auth.currentUser) {
+        try {
+          const userRef = doc(db, "users", auth.currentUser.uid);
+          const userSnapshot = await getDoc(userRef);
+          if (userSnapshot.exists()) {
+            setInviterUsername(userSnapshot.data().username || "Unknown");
+          }
+        } catch (error) {
+          console.error("Error fetching inviter username:", error);
+          setInviterUsername("Unknown");
+        }
+      }
+    };
+
+    fetchInviterUsername();
+  }, []);
 
   // Function to handle the invite process
   const handleInvite = async () => {
@@ -47,17 +68,11 @@ const InviteMemberModal = ({ show, handleClose, groupId, groupName, inviterId })
       // Check if the invitee is already in the group
       console.log(`Checking if user ${inviteeId} is already a member of group ${groupId}`);
       const groupRef = doc(db, "groups", groupId); // Reference to the group document
-      console.log(`that ran`);
       const groupSnapshot = await getDoc(groupRef); // Get the document snapshot
-      console.log(`nice`);
 
       if (groupSnapshot.exists()) {
         const groupData = groupSnapshot.data(); // Get the document data
-        console.log("Group data:", groupData);
-
-        // Access the members array
         const membersArray = groupData.members || [];
-        console.log("Members array:", membersArray);
 
         // Check if the invitee is already a member of the group
         const isMember = membersArray.includes(inviteeId);
@@ -72,35 +87,17 @@ const InviteMemberModal = ({ show, handleClose, groupId, groupName, inviterId })
         setLoading(false);
         return;
       }
-      console.log(`is u working ?`);
 
-      // Batch write: create invitation in both 'sentInvitations' and 'pendingInvitations'
-      const batch = writeBatch(db);
+      // Create the invitation document in the user's `pendingInvitations` subcollection
+      const userInvitationRef = doc(collection(db, "users", inviteeId, "pendingInvitations")); // Generate a new ID for the document
 
-      // Reference to the group's sentInvitations subcollection
-      const groupInvitationRef = doc(collection(db, "groups", groupId, "sentInvitations"));
-      console.log(`Creating document in sentInvitations subcollection with ID: ${groupInvitationRef.id}`);
-      batch.set(groupInvitationRef, {
-        inviteeId,
-        inviteeUsername: username,
-        inviterId,
-        status: "pending",
-        timestamp: serverTimestamp(),
-      });
-
-      // Reference to the user's pendingInvitations subcollection
-      const userInvitationRef = doc(collection(db, "users", inviteeId, "pendingInvitations"), groupInvitationRef.id); // Use the same ID
-      console.log(`Creating document in pendingInvitations subcollection for user ${inviteeId} with ID: ${groupInvitationRef.id}`);
-      batch.set(userInvitationRef, {
+      await setDoc(userInvitationRef, {
         groupId,
         groupName,
         status: "pending",
         timestamp: serverTimestamp(),
+        invitedBy: inviterUsername, // Add inviter's username
       });
-
-      // Commit the batch write
-      console.log("Committing batch write...");
-      await batch.commit();
 
       console.log(`Invitation sent to "${username}" successfully!`);
       setSuccess(`Invitation sent to "${username}" successfully!`);
