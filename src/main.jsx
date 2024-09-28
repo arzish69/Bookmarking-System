@@ -14,6 +14,7 @@ import Groups from "./main_pages/group/group.jsx";
 import Ai from "./main_pages/ai/ai.jsx";
 import MainHome from "./main_pages/mainhome/mainhome.jsx";
 import MainGroup from "./main_pages/maingroup/maingroup.jsx";
+import GroupSettings from "./main_pages/group/grpsettings.jsx";
 
 const router = createBrowserRouter([
   {
@@ -69,6 +70,14 @@ const router = createBrowserRouter([
     element: (
       <div>
         <Groups />
+      </div>
+    ),
+  },
+  {
+    path: "groups/:groupId/settings", // Dynamic route for group settings page
+    element: (
+      <div>
+        <GroupSettings /> {/* Add GroupSettings route here */}
       </div>
     ),
   },

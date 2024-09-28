@@ -32,6 +32,9 @@ const Groups = () => {
     const [showLeaveModal, setShowLeaveModal] = useState(false); // State for showing the leave confirmation modal
     const [leavingGroup, setLeavingGroup] = useState(false); // State for processing leave group
     const navigate = useNavigate();
+    const goToGroupSettings = () => {
+        navigate(`/groups/${groupId}/settings`); // Navigate to the group settings page
+      };
 
     // Fetch group URLs from Firestore
     const fetchGroupUrls = async (user) => {
@@ -264,7 +267,7 @@ const Groups = () => {
                             >
                                 Leave Group
                             </button>
-                            <button className="btn btn-secondary">Group settings</button>
+                            <button className="btn btn-secondary" onClick={goToGroupSettings}>Group settings</button>
                         </div>
                     )}
                 </div>
