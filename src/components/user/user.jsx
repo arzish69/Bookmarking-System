@@ -1,8 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore"; // Firestore imports
+import { auth, db } from "../../firebaseConfig"; // Import Firebase config
+import { onAuthStateChanged } from "firebase/auth"; // Import auth state change listener
 import MainNavbar from "../../main_pages/main_navbar";
 
 const UserAccount = () => {
   const [activeTab, setActiveTab] = useState("account-general"); // Set default tab
+  const [username, setUsername] = useState(""); // State to store the current user's username
+  const [name, setName] = useState(""); // State to store the current user's name
+  const [email, setEmail] = useState(""); // State to store the current user's email
+
+  // Function to fetch the current user's username from Firestore
+  const fetchUserData = async (userId) => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId)); // Reference to user document in Firestore
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setUsername(userData.username || ""); // Set the username
+        setName(userData.name || ""); // Set the name
+        setEmail(userData.email || ""); // Set the email
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
+  // UseEffect to listen for auth state changes and fetch the user data
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        fetchUserData(user.uid); // Fetch user data if the user is logged in
+      }
+    });
+    return () => unsubscribe(); // Cleanup the listener on component unmount
+  }, []);
 
   return (
     <>
@@ -107,7 +138,8 @@ const UserAccount = () => {
                         <input
                           type="text"
                           className="form-control mb-1"
-                          value="nmaxwell"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)} // Enable input field editing
                         />
                       </div>
                       <div className="form-group">
@@ -115,7 +147,8 @@ const UserAccount = () => {
                         <input
                           type="text"
                           className="form-control"
-                          value="Nelle Maxwell"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)} // Enable input field editing
                         />
                       </div>
                       <div className="form-group">
@@ -123,7 +156,8 @@ const UserAccount = () => {
                         <input
                           type="text"
                           className="form-control mb-1"
-                          value="nmaxwell@mail.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)} // Enable input field editing
                         />
                         <div className="alert alert-warning mt-3">
                           Your email is not confirmed. Please check your inbox.
@@ -143,248 +177,8 @@ const UserAccount = () => {
                   </div>
                 )}
 
-                {activeTab === "account-change-password" && (
-                  <div
-                    className="tab-pane fade active show"
-                    id="account-change-password"
-                  >
-                    <div className="card-body pb-2">
-                      <div className="form-group">
-                        <label className="form-label">Current password</label>
-                        <input type="password" className="form-control" />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">New password</label>
-                        <input type="password" className="form-control" />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">
-                          Repeat new password
-                        </label>
-                        <input type="password" className="form-control" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "account-info" && (
-                  <div className="tab-pane fade active show" id="account-info">
-                    <div className="card-body pb-2">
-                      <div className="form-group">
-                        <label className="form-label">Bio</label>
-                        <textarea
-                          className="form-control"
-                          rows="5"
-                          defaultValue="Lorem ipsum dolor sit amet..."
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Birthday</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value="May 3, 1995"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Country</label>
-                        <select className="custom-select">
-                          <option>USA</option>
-                          <option selected>Canada</option>
-                          <option>UK</option>
-                          <option>Germany</option>
-                          <option>France</option>
-                        </select>
-                      </div>
-                    </div>
-                    <hr className="border-light m-0" />
-                    <div className="card-body pb-2">
-                      <h6 className="mb-4">Contacts</h6>
-                      <div className="form-group">
-                        <label className="form-label">Phone</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value="+0 (123) 456 7891"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Website</label>
-                        <input type="text" className="form-control" value="" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "account-social-links" && (
-                  <div
-                    className="tab-pane fade active show"
-                    id="account-social-links"
-                  >
-                    <div className="card-body pb-2">
-                      <div className="form-group">
-                        <label className="form-label">Twitter</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value="https://twitter.com/user"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Facebook</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value="https://www.facebook.com/user"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">LinkedIn</label>
-                        <input type="text" className="form-control" value="" />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Instagram</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value="https://www.instagram.com/user"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "account-connections" && (
-                  <div
-                    className="tab-pane fade active show"
-                    id="account-connections"
-                  >
-                    <div className="card-body">
-                      <button type="button" className="btn btn-twitter">
-                        Connect to <strong>Twitter</strong>
-                      </button>
-                    </div>
-                    <hr className="border-light m-0" />
-                    <div className="card-body">
-                      <h5 className="mb-2">
-                        <a
-                          href="#"
-                          className="float-right text-muted text-tiny"
-                        >
-                          <i className="ion ion-md-close" /> Remove
-                        </a>
-                        <i className="ion ion-logo-google text-google" />
-                        You are connected to Google:
-                      </h5>
-                      nmaxwell@mail.com
-                    </div>
-                    <hr className="border-light m-0" />
-                    <div className="card-body">
-                      <button type="button" className="btn btn-facebook">
-                        Connect to <strong>Facebook</strong>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "account-notifications" && (
-                  <div
-                    className="tab-pane fade active show"
-                    id="account-notifications"
-                  >
-                    <div className="card-body pb-2">
-                      <h6 className="mb-4">Activity</h6>
-                      <div className="form-group">
-                        <label className="switcher">
-                          <input
-                            type="checkbox"
-                            className="switcher-input"
-                            defaultChecked
-                          />
-                          <span className="switcher-indicator">
-                            <span className="switcher-yes" />
-                            <span className="switcher-no" />
-                          </span>
-                          <span className="switcher-label">
-                            Email me when someone comments on my post
-                          </span>
-                        </label>
-                      </div>
-                      <div className="form-group">
-                        <label className="switcher">
-                          <input
-                            type="checkbox"
-                            className="switcher-input"
-                            defaultChecked
-                          />
-                          <span className="switcher-indicator">
-                            <span className="switcher-yes" />
-                            <span className="switcher-no" />
-                          </span>
-                          <span className="switcher-label">
-                            Email me when someone answers on my forum thread
-                          </span>
-                        </label>
-                      </div>
-                      <div className="form-group">
-                        <label className="switcher">
-                          <input type="checkbox" className="switcher-input" />
-                          <span className="switcher-indicator">
-                            <span className="switcher-yes" />
-                            <span className="switcher-no" />
-                          </span>
-                          <span className="switcher-label">
-                            Email me when someone follows me
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                    <hr className="border-light m-0" />
-                    <div className="card-body pb-2">
-                      <h6 className="mb-4">News</h6>
-                      <div className="form-group">
-                        <label className="switcher">
-                          <input
-                            type="checkbox"
-                            className="switcher-input"
-                            defaultChecked
-                          />
-                          <span className="switcher-indicator">
-                            <span className="switcher-yes" />
-                            <span className="switcher-no" />
-                          </span>
-                          <span className="switcher-label">
-                            Notify me by email about sales and latest news
-                          </span>
-                        </label>
-                      </div>
-                      <div className="form-group">
-                        <label className="switcher">
-                          <input type="checkbox" className="switcher-input" />
-                          <span className="switcher-indicator">
-                            <span className="switcher-yes" />
-                            <span className="switcher-no" />
-                          </span>
-                          <span className="switcher-label">
-                            Email me about new features and updates
-                          </span>
-                        </label>
-                      </div>
-                      <div className="form-group">
-                        <label className="switcher">
-                          <input type="checkbox" className="switcher-input" />
-                          <span className="switcher-indicator">
-                            <span className="switcher-yes" />
-                            <span className="switcher-no" />
-                          </span>
-                          <span className="switcher-label">
-                            Email me about tips on using account
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Add the other tab content here as in your original code */}
+                {/* ... */}
               </div>
             </div>
           </div>

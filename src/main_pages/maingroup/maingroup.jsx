@@ -1,127 +1,85 @@
-import React, { useState, useEffect } from "react";
-import { collection, addDoc, getDoc, getDocs, updateDoc, doc, arrayRemove } from "firebase/firestore";
-import { db, auth } from "../../firebaseConfig";
+import React, { useEffect, useState } from "react";
+import { Navbar, Nav, Container, NavDropdown } from "react-bootstrap";
+import { auth, db } from "../firebaseConfig"; // Import Firebase configuration
 import { onAuthStateChanged } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
-import Spinner from "react-bootstrap/Spinner";
-import Modal from "react-bootstrap/Modal"; // Import Modal
-import Button from "react-bootstrap/Button"; // Import Button
-import MainNavbar from "../main_navbar";
+import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, arrayUnion } from "firebase/firestore";
+import BellIcon from "../assets/bell.svg"; // Your bell icon
+import Notify from "../components/notify";
 
-const MainGroup = () => {
-  const [groups, setGroups] = useState([]);
-  const [newGroupName, setNewGroupName] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [selectedGroupId, setSelectedGroupId] = useState(null); // State to track selected group for leaving
-  const [showLeaveGroupModal, setShowLeaveGroupModal] = useState(false); // State for showing the modal
-  const navigate = useNavigate();
+const MainNavbar = () => {
+  const [userName, setUserName] = useState(""); // Store username
+  const [loading, setLoading] = useState(true); // Track loading state
+  const [showNotificationBox, setShowNotificationBox] = useState(false); // Show/hide notification box
+  const [currentUser, setCurrentUser] = useState(null); // Store authenticated user
+  const [hasPendingInvitations, setHasPendingInvitations] = useState(false); // Track if there are pending invitations
+  const [pendingInvitations, setPendingInvitations] = useState([]); // Track pending invitations
 
-  // Fetch the groups the user is part of
-  const fetchUserGroups = async (userId) => {
-    setLoading(true);
+  // Fetch pending invitations for the current user
+  const fetchPendingInvitations = async (userId) => {
     try {
-      const userDoc = await getDoc(doc(db, "users", userId));
-      if (userDoc.exists()) {
-        const userGroups = userDoc.data().groups || [];
-        const groupList = [];
+      const invitationsRef = collection(db, "users", userId, "pendingInvitations");
+      const pendingQuery = query(invitationsRef, where("status", "==", "pending"));
+      const querySnapshot = await getDocs(pendingQuery);
 
-        for (const groupId of userGroups) {
-          const groupDoc = await getDoc(doc(db, "groups", groupId));
-          if (groupDoc.exists()) {
-            groupList.push({ id: groupDoc.id, ...groupDoc.data() });
-          }
-        }
+      const invitations = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-        setGroups(groupList);
-      }
+      setPendingInvitations(invitations);
+      setHasPendingInvitations(invitations.length > 0);
     } catch (error) {
-      console.error("Error fetching groups:", error);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching pending invitations:", error);
     }
   };
 
-  // Create a new group
-  const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) return;
-
-    setLoading(true);
+  const handleAccept = async (invitation) => {
     try {
-      const newGroup = await addDoc(collection(db, "groups"), {
-        groupName: newGroupName,
-        members: [currentUser.uid], // Add the creator as a member
-        description: "This is a new group",
-        createdBy: currentUser.uid,
-      });
-
-      // Update the user's group list
-      const userRef = doc(db, "users", currentUser.uid);
-      const userDoc = await getDoc(userRef);
-
-      if (userDoc.exists()) {
-        const userGroups = userDoc.data().groups || [];
-        await updateDoc(userRef, {
-          groups: [...userGroups, newGroup.id],
-        });
-      }
-
-      // Refresh the group list
-      fetchUserGroups(currentUser.uid);
-      setNewGroupName("");
-    } catch (error) {
-      console.error("Error creating group:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Leave a group
-  const handleLeaveGroup = async () => {
-    setLoading(true);
-    try {
-      const userRef = doc(db, "users", currentUser.uid);
-
-      // Remove the groupId from the user's 'groups' array
-      await updateDoc(userRef, {
-        groups: arrayRemove(selectedGroupId),
-      });
-
-      // Remove the user's UID from the group's 'members' array
-      const groupRef = doc(db, "groups", selectedGroupId);
+      setLoading(true);
+      const groupRef = doc(db, "groups", invitation.groupId);
       await updateDoc(groupRef, {
-        members: arrayRemove(currentUser.uid),
+        members: arrayUnion(currentUser.uid),
       });
 
-      // Refresh the group list
-      fetchUserGroups(currentUser.uid);
-      setShowLeaveGroupModal(false); // Close the modal
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        groups: arrayUnion(invitation.groupId),
+      });
+
+      await deleteDoc(doc(db, "users", currentUser.uid, "pendingInvitations", invitation.id));
+
+      fetchPendingInvitations(currentUser.uid); // Refresh the pending invitations list
     } catch (error) {
-      console.error("Error leaving group:", error);
+      console.error("Error accepting invitation:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle navigating to a specific group page
-  const handleGroupClick = (groupId) => {
-    navigate(`/groups/${groupId}`); // Navigate to the group page with the groupId
+  const handleDecline = async (invitation) => {
+    try {
+      setLoading(true);
+      await deleteDoc(doc(db, "users", currentUser.uid, "pendingInvitations", invitation.id));
+      fetchPendingInvitations(currentUser.uid); // Refresh the pending invitations list
+    } catch (error) {
+      console.error("Error declining invitation:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Handle showing the leave group confirmation modal
-  const confirmLeaveGroup = (groupId) => {
-    setSelectedGroupId(groupId); // Track which group the user is trying to leave
-    setShowLeaveGroupModal(true); // Show the modal
-  };
-
-  // Fetch current user and their groups
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
-        fetchUserGroups(user.uid);
+        fetchPendingInvitations(user.uid); // Fetch pending invitations immediately on login
+        setUserName(user.displayName || "User"); // Get the username from the user object
+        setLoading(false);
       } else {
         setCurrentUser(null);
+        setPendingInvitations([]);
+        setHasPendingInvitations(false); // Reset state when no user is logged in
+        setUserName("Guest");
       }
     });
 
@@ -129,81 +87,102 @@ const MainGroup = () => {
   }, []);
 
   return (
-    <>
-      <MainNavbar />
-      <div className="container mt-4" style={{ paddingTop: "60px" }}>
-        <h1>My Groups</h1>
-
-        {loading ? (
-          <Spinner animation="border" />
-        ) : (
-          <>
-            <h3>Groups you're part of:</h3>
-            <ul className="list-group mt-3">
-              {groups.length === 0 ? (
-                <li className="list-group-item">You are not part of any groups yet.</li>
-              ) : (
-                groups.map((group) => (
-                  <li key={group.id} className="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                      <strong onClick={() => handleGroupClick(group.id)} style={{ cursor: "pointer" }}>
-                        {group.groupName}
-                      </strong>
-                      <br />
-                      <small>{group.description}</small>
-                    </div>
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => confirmLeaveGroup(group.id)} // Show modal for confirmation
-                      disabled={loading}
-                    >
-                      Leave Group
-                    </button>
-                  </li>
-                ))
+    <Navbar bg="light" expand="lg" fixed="top">
+      <Container>
+        <Navbar.Brand href="#home">Clone</Navbar.Brand>
+        <Navbar.Toggle aria-controls="navbar-nav" />
+        <Navbar.Collapse id="navbar-nav">
+          <Nav className="mx-auto">
+            <Nav.Link href="/mainhome" className="mx-2">
+              Home
+            </Nav.Link>
+            <Nav.Link href="/library" className="mx-2">
+              My Library
+            </Nav.Link>
+            <Nav.Link href="/maingroup" className="mx-2">
+              My Groups
+            </Nav.Link>
+            <Nav.Link href="/ai" className="mx-2">
+              Summarizer
+            </Nav.Link>
+          </Nav>
+          <Nav className="ms-auto d-flex align-items-center position-relative">
+            {/* Bell Icon Button */}
+            <button
+              className="btn"
+              onClick={() => setShowNotificationBox(!showNotificationBox)}
+              style={{ border: "none", background: "transparent", padding: 0, marginRight: "10px", position: "relative" }}
+            >
+              <img src={BellIcon} alt="Notifications" style={{ width: "24px", height: "24px" }} />
+              {hasPendingInvitations && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-5px",
+                    right: "-5px",
+                    width: "10px",
+                    height: "10px",
+                    backgroundColor: "red",
+                    borderRadius: "50%",
+                    display: "inline-block",
+                    boxShadow: "0 0 5px rgba(0,0,0,0.5)",
+                  }}
+                ></span>
               )}
-            </ul>
+            </button>
 
-            {/* Create new group */}
-            <div className="mt-5">
-              <h3>Create a new group</h3>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Enter group name"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-              />
-              <button className="btn btn-primary mt-3" onClick={handleCreateGroup} disabled={loading}>
-                Create Group
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+            {/* Notification Box */}
+            {showNotificationBox && (
+              <div
+                className="notification-box"
+                style={{
+                  position: "absolute",
+                  top: "40px",
+                  right: "0",
+                  width: "300px",
+                  maxHeight: "400px",
+                  backgroundColor: "white",
+                  boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                  borderRadius: "8px",
+                  zIndex: 1000,
+                  overflowY: "auto",
+                  padding: "10px",
+                }}
+              >
+                {/* Pass data to Notify */}
+                <Notify
+                  pendingInvitations={pendingInvitations} // Pass invitations directly to Notify
+                  handleAccept={handleAccept}
+                  handleDecline={handleDecline}
+                  loading={loading}
+                />
+              </div>
+            )}
 
-      {/* Leave Group Confirmation Modal */}
-      <Modal show={showLeaveGroupModal} onHide={() => setShowLeaveGroupModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Confirm Leaving Group</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>Are you sure you want to leave this group?</p>
-          <p>
-            <strong>Warning:</strong> All chat messages, URLs, and other group content will be lost and cannot be recovered.
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowLeaveGroupModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="danger" onClick={handleLeaveGroup}>
-            Leave Group
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </>
+            {/* User Profile with Username */}
+            <NavDropdown
+              title={
+                <>
+                  <img
+                    src="https://via.placeholder.com/30"
+                    alt="User"
+                    className="rounded-circle"
+                    style={{ marginRight: "8px" }}
+                  />
+                  {loading ? "Loading..." : userName}
+                </>
+              }
+              id="user-profile-dropdown"
+            >
+              <NavDropdown.Item href="/user">Settings</NavDropdown.Item>
+              <NavDropdown.Divider />
+              <NavDropdown.Item href="/">Logout</NavDropdown.Item>
+            </NavDropdown>
+          </Nav>
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
   );
 };
 
-export default MainGroup;
+export default MainNavbar;
