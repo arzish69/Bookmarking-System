@@ -6,6 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal"; // Import Modal for confirmation
 import Button from "react-bootstrap/Button"; // Import Button for modal actions
+import starIcon from "../../assets/star.svg";
 import InviteMemberModal from "../../components/InviteMemberModel";
 import dustbinIcon from "../../assets/dustbin.svg";
 import gearIcon from "../../assets/gear.svg";
@@ -26,9 +27,12 @@ const Groups = () => {
     const [username, setUsername] = useState("");  // Store username separately
     const { groupId } = useParams();  // Replace with actual groupId
     const [groupName, setGroupName] = useState("");
+    const [createdBy, setCreatedBy] = useState("");
+    const [createdByUsername, setCreatedByUsername] = useState("");
     const [showOptions, setShowOptions] = useState(false); // To show/hide the buttons
     const [gearSpinning, setGearSpinning] = useState(false); // To control the gear spin
     const [showInviteModal, setShowInviteModal] = useState(false); // State to control invite modal visibility
+    const [usernames, setUsernames] = useState({});
     const [showLeaveModal, setShowLeaveModal] = useState(false); // State for showing the leave confirmation modal
     const [leavingGroup, setLeavingGroup] = useState(false); // State for processing leave group
     const navigate = useNavigate();
@@ -91,9 +95,15 @@ const Groups = () => {
             const groupDoc = await getDoc(groupRef);
 
             if (groupDoc.exists()) {
-                setGroupName(groupDoc.data().groupName);
-            } else {
-                console.error("Group not found");
+                const groupData = groupDoc.data();
+                setGroupName(groupData.groupName);
+                setCreatedBy(groupData.createdBy);// Fetch the admin's username
+
+
+                const createdByUserDoc = await getDoc(doc(db, "users", groupData.createdBy));
+                    if (createdByUserDoc.exists()) {
+                    setCreatedByUsername(createdByUserDoc.data().username);
+                } 
             }
         } catch (error) {
             console.error("Error fetching group name:", error);
@@ -257,9 +267,11 @@ const Groups = () => {
                     {/* Options will roll out when the gear is clicked, moved to the right of the gear */}
                     {showOptions && (
                         <div className="d-flex button-container" style={{ marginLeft: "15px" }}>                           
-                            <button className="btn btn-primary mr-2" style={{ marginRight: "10px" }} onClick={() => setShowInviteModal(true)}>
+                             {currentUser && currentUser.uid === createdBy && (
+                                <button className="btn btn-primary mr-2" style={{ marginRight: "10px" }} onClick={() => setShowInviteModal(true)}>
                                 Invite a member
-                            </button>
+                                </button>
+                            )}
                             <button
                                 className="btn btn-danger mr-2"
                                 style={{ marginRight: "10px" }}
@@ -322,7 +334,11 @@ const Groups = () => {
                                                 {sharedUrl.title || sharedUrl.url}
                                             </a>
                                             <br />
-                                            <small>Shared by: {sharedUrl.sharedBy}</small>
+                                            <small>Shared by: {sharedUrl.sharedBy}
+                                                {sharedUrl.sharedBy === createdByUsername && (
+                                                <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />
+                                                )}
+                                            </small>
                                             <br />
                                             <small>Timestamp: {new Date(sharedUrl.timestamp?.seconds * 1000).toLocaleString()}</small>
                                         </div>
@@ -350,7 +366,11 @@ const Groups = () => {
                                 {groupMessages.map((msg) => (
                                     <li key={msg.id} className="list-group-item d-flex justify-content-between align-items-center">
                                         <div>
-                                            <strong>{msg.sentBy}:</strong> {msg.message}
+                                            <strong>{msg.sentBy}</strong>
+                                                {msg.sentBy === createdByUsername && (
+                                                    <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />
+                                                )}
+                                                : {msg.message}
                                             <br />
                                             <small>Timestamp: {new Date(msg.timestamp?.seconds * 1000).toLocaleString()}</small>
                                         </div>

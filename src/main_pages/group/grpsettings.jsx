@@ -1,25 +1,56 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom"; // To get groupId from the URL params
 import { doc, getDoc, updateDoc, arrayRemove } from "firebase/firestore"; // Firestore imports
-import { db } from "../../firebaseConfig"; // Import your Firestore configuration
-import { ListGroup, Button, Spinner } from "react-bootstrap"; // Use Bootstrap for UI components
+import { db, auth } from "../../firebaseConfig"; // Import your Firestore configuration and auth
+import { ListGroup, Button, Spinner } from "react-bootstrap";
+import starIcon from "../../assets/star.svg"; // Import the star SVG for admin
+import { onAuthStateChanged } from "firebase/auth"; // Use onAuthStateChanged to ensure user is loaded
+import MainNavbar from "../main_navbar";
 
 const GroupSettings = () => {
   const { groupId } = useParams(); // Extract groupId from the URL params
   const [groupData, setGroupData] = useState(null); // State to store group information
   const [loading, setLoading] = useState(true); // State to manage loading
   const [error, setError] = useState(""); // State to manage error messages
+  const [usernames, setUsernames] = useState({}); // State to store usernames mapped by member IDs
+  const [currentUserId, setCurrentUserId] = useState(""); // State to store the currently logged-in user's UID
+  const [createdBy, setCreatedBy] = useState(""); // State to store the group's admin user ID
+  const [isAdmin, setIsAdmin] = useState(false); // State to track if the current user is the admin
+  const [isUserLoaded, setIsUserLoaded] = useState(false); // State to ensure user is fully loaded
+
+  // Function to fetch the current user's UID
+  const fetchCurrentUserUid = () => {
+    return new Promise((resolve, reject) => {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          setCurrentUserId(user.uid); // Store the UID in state
+          setIsUserLoaded(true); // Set user loaded to true
+          resolve(user.uid);
+        } else {
+          setIsUserLoaded(true); // Even if no user is logged in, mark user loaded as true
+          reject("No user logged in");
+        }
+      });
+    });
+  };
 
   // Function to fetch group details and members
   const fetchGroupDetails = async () => {
     setLoading(true);
     try {
-      // Reference to the group document in Firestore
       const groupRef = doc(db, "groups", groupId);
       const groupSnapshot = await getDoc(groupRef);
 
       if (groupSnapshot.exists()) {
-        setGroupData(groupSnapshot.data()); // Store the group data
+        const groupData = groupSnapshot.data();
+        setGroupData(groupData);
+
+        // Set the admin's user ID
+        setCreatedBy(groupData.createdBy);
+
+        // Fetch usernames for all group members
+        const usernamesMap = await fetchUsernames(groupData.members);
+        setUsernames(usernamesMap);
       } else {
         setError("Group not found!");
       }
@@ -27,8 +58,28 @@ const GroupSettings = () => {
       console.error("Error fetching group details:", error);
       setError("Failed to fetch group details. Please try again later.");
     } finally {
-      setLoading(false); // Set loading to false after data is fetched
+      setLoading(false);
     }
+  };
+
+  // Function to fetch usernames for all members
+  const fetchUsernames = async (memberIds) => {
+    const usernamesMap = {};
+    try {
+      for (const memberId of memberIds) {
+        const userRef = doc(db, "users", memberId);
+        const userSnapshot = await getDoc(userRef);
+        if (userSnapshot.exists()) {
+          usernamesMap[memberId] = userSnapshot.data().username;
+        } else {
+          usernamesMap[memberId] = "Unknown User";
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching usernames:", error);
+      setError("Failed to fetch usernames.");
+    }
+    return usernamesMap;
   };
 
   // Function to remove a member from the group
@@ -38,19 +89,21 @@ const GroupSettings = () => {
 
       setLoading(true);
 
-      // Reference to the group document
       const groupRef = doc(db, "groups", groupId);
-
-      // Remove the member ID from the `members` array in the group document
       await updateDoc(groupRef, {
         members: arrayRemove(memberId),
       });
 
-      // Update the local state to reflect the change
       setGroupData((prevData) => ({
         ...prevData,
         members: prevData.members.filter((id) => id !== memberId),
       }));
+
+      setUsernames((prevUsernames) => {
+        const newUsernames = { ...prevUsernames };
+        delete newUsernames[memberId];
+        return newUsernames;
+      });
 
       console.log(`Member ${memberId} removed successfully from the group.`);
     } catch (error) {
@@ -61,19 +114,39 @@ const GroupSettings = () => {
     }
   };
 
-  // UseEffect to fetch group details on component mount
+  // UseEffect to fetch current user's UID on component mount
   useEffect(() => {
-    if (groupId) {
-      fetchGroupDetails(); // Fetch group details when component mounts
-    }
-  }, [groupId]);
+    const initializeUser = async () => {
+      try {
+        await fetchCurrentUserUid(); // Fetch current user's UID and set state
+      } catch (error) {
+        console.error("Failed to fetch current user UID:", error);
+      }
+    };
+    initializeUser();
+  }, []);
 
+  // UseEffect to fetch group details only after the current user is loaded
+  useEffect(() => {
+    if (isUserLoaded && currentUserId) {
+      fetchGroupDetails();
+    }
+  }, [isUserLoaded, currentUserId]);
+
+  // Check if the current user is admin whenever `currentUserId` or `createdBy` changes
+  useEffect(() => {
+    if (currentUserId && createdBy) {
+      setIsAdmin(currentUserId === createdBy);
+    }
+  }, [currentUserId, createdBy]);
+
+  // Return loading spinner if user or group data is not yet loaded
   return (
-    <div className="container mt-5">
+    <>
+    <MainNavbar />
+    <div className="container mt-5" style={{ paddingTop: "60px", paddingBottom: "60px" }}>
       <h2>Group Settings</h2>
-      {loading ? (
-        <Spinner animation="border" />
-      ) : error ? (
+      {error ? (
         <p style={{ color: "red" }}>{error}</p>
       ) : (
         <>
@@ -85,30 +158,30 @@ const GroupSettings = () => {
           <ListGroup>
             {groupData && groupData.members.length > 0 ? (
               groupData.members.map((memberId) => (
-                <ListGroup.Item
-                  key={memberId}
-                  className="d-flex justify-content-between align-items-center"
-                >
-                  <div>{memberId}</div>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleRemoveMember(memberId)}
-                    disabled={loading}
-                  >
-                    Remove
-                  </Button>
+                <ListGroup.Item key={memberId} className="d-flex justify-content-between align-items-center">
+                  {/* Display username instead of member ID */}
+                  <div>
+                    {usernames[memberId] || "Loading..."}
+                    {memberId === createdBy && (
+                      <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />
+                    )}
+                  </div>
+                  {/* Only show the "Remove" button if the current user is the admin */}
+                  {isAdmin && (
+                    <Button variant="danger" size="sm" onClick={() => handleRemoveMember(memberId)} disabled={loading}>
+                      KICK
+                    </Button>
+                  )}
                 </ListGroup.Item>
               ))
             ) : (
               <p>No members found in this group.</p>
             )}
           </ListGroup>
-
-          {/* Add more group settings below as needed */}
         </>
       )}
     </div>
+    </>
   );
 };
 
