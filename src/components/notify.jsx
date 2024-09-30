@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { collection, doc, getDocs, updateDoc, query, where, deleteDoc, arrayUnion } from "firebase/firestore";
-import { db, auth } from "../firebaseConfig"; // Adjust the import path based on your file structure
+import { db, auth } from "../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { ListGroup, Button, Spinner } from "react-bootstrap";
 
-const Notify = () => {
+const Notify = ({ setHasPendingInvitations }) => {
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
@@ -13,23 +13,20 @@ const Notify = () => {
   const fetchPendingInvitations = async (userId) => {
     setLoading(true);
     try {
-      // Create a reference to the pendingInvitations subcollection
       const invitationsRef = collection(db, "users", userId, "pendingInvitations");
-  
-      // Create a query that only fetches invitations where status is "pending"
       const pendingQuery = query(invitationsRef, where("status", "==", "pending"));
-  
-      // Execute the query and get the documents
       const querySnapshot = await getDocs(pendingQuery);
-  
-      // Map through the results and create an array of invitation objects
+
       const invitations = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-  
-      console.log("Fetched pending invitations:", invitations);
-      setPendingInvitations(invitations); // Update state with pending invitations only
+
+      setPendingInvitations(invitations);
+      
+      // Notify the parent component if there are any pending invitations
+      setHasPendingInvitations(invitations.length > 0);
+      
     } catch (error) {
       console.error("Error fetching pending invitations:", error);
     } finally {
@@ -37,59 +34,51 @@ const Notify = () => {
     }
   };
 
-  // Handle accepting an invitation
   const handleAccept = async (invitation) => {
     try {
       setLoading(true);
-      console.log("Accepting invitation:", invitation);
-  
-      // Reference to the invitation document in `pendingInvitations`
       const invitationRef = doc(db, "users", currentUser.uid, "pendingInvitations", invitation.id);
-  
       const groupRef = doc(db, "groups", invitation.groupId);
 
-      // Add the user to the group's `members` array field
       await updateDoc(groupRef, {
         members: arrayUnion(currentUser.uid),
       });
 
-      console.log(`User ${currentUser.uid} successfully added to group ${invitation.groupId}`);
-
       const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        groups: arrayUnion(invitation.groupId),
+      });
 
-    // Add the groupId to the user's `groups` array field
-    await updateDoc(userRef, {
-      groups: arrayUnion(invitation.groupId),
-    });
-    console.log(`Group ${invitation.groupId} added to user's groups array`);
-  
-      // Delete the document from `pendingInvitations`
       await deleteDoc(invitationRef);
-  
-      // Remove the invitation from the state after deletion
-      setPendingInvitations((prevInvitations) => prevInvitations.filter((inv) => inv.id !== invitation.id));
-      console.log("Invitation accepted and document deleted successfully.");
+
+      setPendingInvitations((prevInvitations) => {
+        const updatedInvitations = prevInvitations.filter((inv) => inv.id !== invitation.id);
+        
+        // Immediately update the parent component's state if no invitations are left
+        setHasPendingInvitations(updatedInvitations.length > 0);
+
+        return updatedInvitations;
+      });
     } catch (error) {
       console.error("Error accepting invitation:", error);
     } finally {
       setLoading(false);
     }
   };
-  
+
   const handleDecline = async (invitation) => {
     try {
       setLoading(true);
-      console.log("Declining invitation:", invitation);
-  
-      // Reference to the invitation document in `pendingInvitations`
       const invitationRef = doc(db, "users", currentUser.uid, "pendingInvitations", invitation.id);
-  
-      // Delete the document from `pendingInvitations`
       await deleteDoc(invitationRef);
-  
-      // Remove the invitation from the state after deletion
-      setPendingInvitations((prevInvitations) => prevInvitations.filter((inv) => inv.id !== invitation.id));
-      console.log("Invitation declined and document deleted successfully.");
+      setPendingInvitations((prevInvitations) => {
+        const updatedInvitations = prevInvitations.filter((inv) => inv.id !== invitation.id);
+        
+        // Immediately update the parent component's state if no invitations are left
+        setHasPendingInvitations(updatedInvitations.length > 0);
+
+        return updatedInvitations;
+      });
     } catch (error) {
       console.error("Error declining invitation:", error);
     } finally {
@@ -97,51 +86,58 @@ const Notify = () => {
     }
   };
 
-  // Track authentication state
+  // Track authentication state and fetch invitations on mount
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
-        console.log("Authenticated user:", user.uid);
-        fetchPendingInvitations(user.uid); // Fetch invitations when user is authenticated
+        fetchPendingInvitations(user.uid); // Fetch invitations when user is authenticated immediately on mount
       } else {
         setCurrentUser(null);
         setPendingInvitations([]);
-        console.log("No user is authenticated.");
+        setHasPendingInvitations(false); // No pending invitations when no user is logged in
       }
     });
 
-    return () => unsubscribe(); // Cleanup on unmount
+    return () => unsubscribe();
   }, []);
 
   return (
-    <div className="container mt-5">
-      <h2>Notifications</h2>
+    <>
+      <h4 style={{ paddingBottom: "10px", fontWeight: "bold", color: "#343a40" }}>Notifications</h4>
       {loading ? (
-        <Spinner animation="border" />
+        <div className="d-flex justify-content-center align-items-center" style={{ height: "200px" }}>
+          <Spinner animation="border" role="status" style={{ width: "3rem", height: "3rem" }}>
+            <span className="sr-only">Loading...</span>
+          </Spinner>
+        </div>
       ) : (
         <ListGroup>
           {pendingInvitations.length === 0 ? (
-            <ListGroup.Item>No pending invitations.</ListGroup.Item>
+            <ListGroup.Item className="text-center" style={{ fontStyle: "italic" }}>
+              No pending invitations.
+            </ListGroup.Item>
           ) : (
             pendingInvitations.map((invitation) => (
-              <ListGroup.Item key={invitation.id} className="d-flex justify-content-between align-items-center">
+              <ListGroup.Item key={invitation.id} className="d-flex justify-content-between align-items-center p-3 mb-2" style={{ backgroundColor: "#ffffff", border: "1px solid #dee2e6", borderRadius: "5px" }}>
                 <div>
-                  <h6>You're invited in the group "{invitation.groupName}" by {invitation.invitedBy}</h6>
+                  <h6 style={{ fontWeight: "bold", color: "#495057" }}>
+                    You're invited to join the group "<span style={{ color: "#007bff" }}>{invitation.groupName}</span>" by {invitation.invitedBy}
+                  </h6>
                 </div>
                 <div>
                   <Button
                     variant="success"
                     className="mr-2"
                     onClick={() => handleAccept(invitation)}
-                    disabled={invitation.status !== "pending"}
+                    style={{ fontSize: "0.9rem", paddingBottom: "5px" }}
                   >
                     Accept
                   </Button>
                   <Button
                     variant="danger"
                     onClick={() => handleDecline(invitation)}
-                    disabled={invitation.status !== "pending"}
+                    style={{ fontSize: "0.9rem", paddingTop: "5px" }}
                   >
                     Decline
                   </Button>
@@ -151,7 +147,7 @@ const Notify = () => {
           )}
         </ListGroup>
       )}
-    </div>
+    </>
   );
 };
 

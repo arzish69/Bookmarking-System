@@ -8,9 +8,10 @@ import BellIcon from "../assets/bell.svg"; // Import your bell icon
 import Notify from "../components/notify";
 
 const MainNavbar = () => {
-  const [userName, setUserName] = useState(""); 
-  const [loading, setLoading] = useState(true); 
-  const [showNotificationBox, setShowNotificationBox] = useState(false); 
+  const [userName, setUserName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [showNotificationBox, setShowNotificationBox] = useState(false);
+  const [hasPendingInvitations, setHasPendingInvitations] = useState(false); // Track if there are pending invitations
   const [currentUser, setCurrentUser] = useState(null); // Store the current authenticated user
   const db = getFirestore();
 
@@ -77,13 +78,29 @@ const MainNavbar = () => {
               <button
                 className="btn"
                 onClick={handleNotificationToggle} // Toggle notification box
-                style={{ border: "none", background: "transparent", padding: 0, marginRight: "10px" }}
+                style={{ border: "none", background: "transparent", padding: 0, marginRight: "10px", position: "relative" }}
               >
                 <img
                   src={BellIcon}
                   alt="Notifications"
                   style={{ width: "24px", height: "24px" }}
                 />
+                {/* Show red dot if there are pending invitations */}
+                {hasPendingInvitations && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "18px",
+                      right: "-3px",
+                      width: "10px",
+                      height: "10px",
+                      backgroundColor: "red",
+                      borderRadius: "50%",
+                      display: "inline-block",
+                      boxShadow: "0 0 5px rgba(0,0,0,0.5)"
+                    }}
+                  ></span>
+                )}
               </button>
 
               {/* Notification Box */}
@@ -92,7 +109,7 @@ const MainNavbar = () => {
                   className="notification-box"
                   style={{
                     position: "absolute",
-                    top: "40px", // Adjust positioning to be just below the bell icon
+                    top: "70px", // Adjust positioning to be just below the bell icon
                     right: "0",
                     width: "300px",
                     maxHeight: "400px",
@@ -105,7 +122,7 @@ const MainNavbar = () => {
                   }}
                 >
                   {/* Call Notify Component Here */}
-                  <Notify currentUser={currentUser} />
+                  <Notify currentUser={currentUser} setHasPendingInvitations={setHasPendingInvitations} />
                 </div>
               )}
 
