@@ -168,6 +168,7 @@ const Groups = () => {
                 url,
                 title,
                 sharedBy: username,
+                sharedById: currentUser.uid,
                 timestamp: serverTimestamp(),
             });
             setMessage("URL shared with group.");
@@ -205,6 +206,7 @@ const Groups = () => {
             await addDoc(collection(db, "groups", groupId, "messages"), {
                 message: newMessage,
                 sentBy: username,
+                sentById: currentUser.uid,
                 timestamp: serverTimestamp(),
             });
             setNewMessage("");
@@ -333,9 +335,9 @@ const Groups = () => {
                                             <br />
                                             {/* Make username clickable */}
                                             <small>
-                                                Shared by: 
+                                                Shared by
                                                 <Link to={`/user/${sharedUrl.sharedById}`} style={{ textDecoration: "none", color: "inherit" }}>
-                                                    {sharedUrl.sharedBy}
+                                                    : {sharedUrl.sharedBy}
                                                 </Link>
                                                 {sharedUrl.sharedBy === createdByUsername && (
                                                     <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />

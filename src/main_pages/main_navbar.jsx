@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap"; 
-import { auth, db } from "../firebaseConfig"; 
+import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap";
+import { auth, db } from "../firebaseConfig";
 import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import BellIcon from "../assets/bell.svg"; // Import your bell icon
 import Notify from "../components/notify";
+import { Link } from "react-router-dom"; // Import Link for client-side navigation
 
 const MainNavbar = () => {
   const [userName, setUserName] = useState("");
@@ -14,6 +15,7 @@ const MainNavbar = () => {
   const [hasPendingInvitations, setHasPendingInvitations] = useState(false); // Track if there are pending invitations
   const [pendingInvitations, setPendingInvitations] = useState([]); // Store the pending invitations
   const [currentUser, setCurrentUser] = useState(null); // Store the current authenticated user
+
   const db = getFirestore();
 
   // Function to fetch pending invitations for the current user
@@ -30,7 +32,7 @@ const MainNavbar = () => {
       }));
 
       setPendingInvitations(invitations);
-      
+
       // Notify the component state if there are any pending invitations
       setHasPendingInvitations(invitations.length > 0);
     } catch (error) {
@@ -44,8 +46,8 @@ const MainNavbar = () => {
   useEffect(() => {
     const fetchUserName = async (userId) => {
       try {
-        const userDocRef = doc(db, "users", userId); 
-        const userDoc = await getDoc(userDocRef); 
+        const userDocRef = doc(db, "users", userId);
+        const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
           setUserName(userDoc.data().username);
@@ -140,7 +142,7 @@ const MainNavbar = () => {
                   className="notification-box"
                   style={{
                     position: "absolute",
-                    top: "70px", // Adjust positioning to be just below the bell icon
+                    top: "70px",
                     right: "0",
                     width: "300px",
                     maxHeight: "400px",
@@ -152,7 +154,6 @@ const MainNavbar = () => {
                     padding: "10px",
                   }}
                 >
-                  {/* Call Notify Component Here */}
                   <Notify 
                     currentUser={currentUser} 
                     setHasPendingInvitations={setHasPendingInvitations} 
@@ -172,12 +173,17 @@ const MainNavbar = () => {
                       className="rounded-circle"
                       style={{ marginRight: "8px" }}
                     />
-                    {loading ? "Loading..." : userName} 
+                    {loading ? "Loading..." : userName}
                   </>
                 }
                 id="user-profile-dropdown"
               >
-                <NavDropdown.Item href="/user">Settings</NavDropdown.Item>
+                {/* Ensure currentUser is available before using currentUser.uid */}
+                {currentUser && (
+                  <NavDropdown.Item href={`/user/${currentUser.uid}`}>
+                    Settings
+                  </NavDropdown.Item>
+                )}
                 <NavDropdown.Divider />
                 <NavDropdown.Item href="/">Logout</NavDropdown.Item>
               </NavDropdown>
