@@ -10,7 +10,7 @@ import starIcon from "../../assets/star.svg";
 import InviteMemberModal from "../../components/InviteMemberModel";
 import dustbinIcon from "../../assets/dustbin.svg";
 import gearIcon from "../../assets/gear.svg";
-import { useParams, useNavigate } from "react-router-dom"; // Use navigate to redirect
+import { Link, useParams, useNavigate } from "react-router-dom"; // Use navigate to redirect
 import '../../main_pages/group/group.css';
 
 const Groups = () => {
@@ -20,25 +20,25 @@ const Groups = () => {
     const [message, setMessage] = useState("");
     const [groupMessages, setGroupMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
-    const [loading, setLoading] = useState(true); // Start with loading as true
+    const [loading, setLoading] = useState(true);
     const [processingUrl, setProcessingUrl] = useState(null);
-    const [processingMessage, setProcessingMessage] = useState(null); // For processing message deletion
-    const [currentUser, setCurrentUser] = useState(null); // Track authenticated user
-    const [username, setUsername] = useState("");  // Store username separately
-    const { groupId } = useParams();  // Replace with actual groupId
+    const [processingMessage, setProcessingMessage] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [username, setUsername] = useState("");
+    const { groupId } = useParams();
     const [groupName, setGroupName] = useState("");
     const [createdBy, setCreatedBy] = useState("");
     const [createdByUsername, setCreatedByUsername] = useState("");
-    const [showOptions, setShowOptions] = useState(false); // To show/hide the buttons
-    const [gearSpinning, setGearSpinning] = useState(false); // To control the gear spin
-    const [showInviteModal, setShowInviteModal] = useState(false); // State to control invite modal visibility
+    const [showOptions, setShowOptions] = useState(false);
+    const [gearSpinning, setGearSpinning] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
     const [usernames, setUsernames] = useState({});
-    const [showLeaveModal, setShowLeaveModal] = useState(false); // State for showing the leave confirmation modal
-    const [leavingGroup, setLeavingGroup] = useState(false); // State for processing leave group
+    const [showLeaveModal, setShowLeaveModal] = useState(false);
+    const [leavingGroup, setLeavingGroup] = useState(false);
     const navigate = useNavigate();
     const goToGroupSettings = () => {
-        navigate(`/groups/${groupId}/settings`); // Navigate to the group settings page
-      };
+        navigate(`/groups/${groupId}/settings`);
+    };
 
     // Fetch group URLs from Firestore
     const fetchGroupUrls = async (user) => {
@@ -255,28 +255,23 @@ const Groups = () => {
         <>
             <MainNavbar />
             <div className="container mt-4" style={{ paddingTop: "60px", paddingBottom: "60px" }}>
-            <div className="d-flex align-items-center">
+                <div className="d-flex align-items-center">
                     <h1>{loading ? "Loading..." : groupName}</h1>
                     <img
                         src={gearIcon}
                         alt="Gear Icon"
-                        className={`ml-3 ${gearSpinning ? "spinning" : ""}`} // Add spinning class when gear is clicked
-                        style={{ width: "30px", cursor: "pointer", marginLeft: "20px" }} // Add margin to move the gear to the right
+                        className={`ml-3 ${gearSpinning ? "spinning" : ""}`}
+                        style={{ width: "30px", cursor: "pointer", marginLeft: "20px" }}
                         onClick={handleGearClick}
                     />
-                    {/* Options will roll out when the gear is clicked, moved to the right of the gear */}
                     {showOptions && (
-                        <div className="d-flex button-container" style={{ marginLeft: "15px" }}>                           
-                             {currentUser && currentUser.uid === createdBy && (
+                        <div className="d-flex button-container" style={{ marginLeft: "15px" }}>
+                            {currentUser && currentUser.uid === createdBy && (
                                 <button className="btn btn-primary mr-2" style={{ marginRight: "10px" }} onClick={() => setShowInviteModal(true)}>
-                                Invite a member
+                                    Invite a member
                                 </button>
                             )}
-                            <button
-                                className="btn btn-danger mr-2"
-                                style={{ marginRight: "10px" }}
-                                onClick={() => setShowLeaveModal(true)} // Open modal when clicked
-                            >
+                            <button className="btn btn-danger mr-2" style={{ marginRight: "10px" }} onClick={() => setShowLeaveModal(true)}>
                                 Leave Group
                             </button>
                             <button className="btn btn-secondary" onClick={goToGroupSettings}>Group settings</button>
@@ -290,6 +285,7 @@ const Groups = () => {
                     <div>No user is logged in.</div>
                 ) : (
                     <>
+                        {/* Form to share URL */}
                         <form onSubmit={handleShareUrl} className="mt-3">
                             <div className="form-group">
                                 <label htmlFor="title">Title:</label>
@@ -322,6 +318,7 @@ const Groups = () => {
 
                         {message && <div className="alert alert-info mt-3">{message}</div>}
 
+                        {/* Display shared URLs */}
                         <h2 className="mt-5">Shared URLs</h2>
                         <ul className="list-group mt-3">
                             {groupUrls.length === 0 ? (
@@ -334,9 +331,14 @@ const Groups = () => {
                                                 {sharedUrl.title || sharedUrl.url}
                                             </a>
                                             <br />
-                                            <small>Shared by: {sharedUrl.sharedBy}
+                                            {/* Make username clickable */}
+                                            <small>
+                                                Shared by: 
+                                                <Link to={`/user/${sharedUrl.sharedById}`} style={{ textDecoration: "none", color: "inherit" }}>
+                                                    {sharedUrl.sharedBy}
+                                                </Link>
                                                 {sharedUrl.sharedBy === createdByUsername && (
-                                                <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />
+                                                    <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />
                                                 )}
                                             </small>
                                             <br />
@@ -366,11 +368,15 @@ const Groups = () => {
                                 {groupMessages.map((msg) => (
                                     <li key={msg.id} className="list-group-item d-flex justify-content-between align-items-center">
                                         <div>
-                                            <strong>{msg.sentBy}</strong>
+                                            <strong>
+                                                {/* Make username clickable */}
+                                                <Link to={`/user/${msg.sentById}`} style={{ textDecoration: "none", color: "inherit" }}>
+                                                    {msg.sentBy}
+                                                </Link>
                                                 {msg.sentBy === createdByUsername && (
                                                     <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />
                                                 )}
-                                                : {msg.message}
+                                            </strong>: {msg.message}
                                             <br />
                                             <small>Timestamp: {new Date(msg.timestamp?.seconds * 1000).toLocaleString()}</small>
                                         </div>
@@ -410,6 +416,7 @@ const Groups = () => {
                 )}
             </div>
 
+            {/* Invite Member Modal */}
             <InviteMemberModal
                 show={showInviteModal}
                 handleClose={() => setShowInviteModal(false)}

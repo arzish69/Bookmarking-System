@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom"; // Import Link from react-router-dom
 import { doc, getDoc, updateDoc, arrayRemove } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
-import { ListGroup, Button, Spinner, Modal } from "react-bootstrap"; // Import Modal from react-bootstrap
-import starIcon from "../../assets/star.svg"; // Import the star SVG for admin
+import { ListGroup, Button, Spinner, Modal } from "react-bootstrap";
+import starIcon from "../../assets/star.svg";
 import { onAuthStateChanged } from "firebase/auth";
 import MainNavbar from "../main_navbar";
 
@@ -18,11 +18,9 @@ const GroupSettings = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isUserLoaded, setIsUserLoaded] = useState(false);
 
-  // Modal state variables
-  const [showKickModal, setShowKickModal] = useState(false); // State to show/hide modal
-  const [selectedMember, setSelectedMember] = useState({ id: "", username: "" }); // Track the member being removed
+  const [showKickModal, setShowKickModal] = useState(false); // Modal state
+  const [selectedMember, setSelectedMember] = useState({ id: "", username: "" });
 
-  // Function to fetch the current user's UID
   const fetchCurrentUserUid = () => {
     return new Promise((resolve, reject) => {
       onAuthStateChanged(auth, (user) => {
@@ -38,7 +36,6 @@ const GroupSettings = () => {
     });
   };
 
-  // Function to fetch group details and members
   const fetchGroupDetails = async () => {
     setLoading(true);
     try {
@@ -49,10 +46,8 @@ const GroupSettings = () => {
         const groupData = groupSnapshot.data();
         setGroupData(groupData);
 
-        // Set the admin's user ID
         setCreatedBy(groupData.createdBy);
 
-        // Fetch usernames for all group members
         const usernamesMap = await fetchUsernames(groupData.members);
         setUsernames(usernamesMap);
       } else {
@@ -66,7 +61,6 @@ const GroupSettings = () => {
     }
   };
 
-  // Function to fetch usernames for all members
   const fetchUsernames = async (memberIds) => {
     const usernamesMap = {};
     try {
@@ -86,29 +80,23 @@ const GroupSettings = () => {
     return usernamesMap;
   };
 
-  // Function to remove a member from the group
   const handleRemoveMember = async () => {
     const { id: memberId } = selectedMember;
     try {
       if (!groupData || !groupData.members.includes(memberId)) return;
 
       setLoading(true);
-
-      // Reference to the group document
       const groupRef = doc(db, "groups", groupId);
       const userRef = doc(db, "users", memberId);
 
-      // Remove the member ID from the members array in the group document
       await updateDoc(groupRef, {
         members: arrayRemove(memberId),
       });
 
-      // Remove the groupId from the groups array in the user's document
       await updateDoc(userRef, {
         groups: arrayRemove(groupId),
       });
 
-      // Update the local state to reflect the change
       setGroupData((prevData) => ({
         ...prevData,
         members: prevData.members.filter((id) => id !== memberId),
@@ -120,7 +108,6 @@ const GroupSettings = () => {
         return newUsernames;
       });
 
-      // Close the modal after successful removal
       setShowKickModal(false);
     } catch (error) {
       console.error("Error removing member:", error);
@@ -130,13 +117,11 @@ const GroupSettings = () => {
     }
   };
 
-  // Function to open the kick confirmation modal
   const confirmKickMember = (memberId) => {
     setSelectedMember({ id: memberId, username: usernames[memberId] || "Unknown" });
-    setShowKickModal(true); // Show the modal
+    setShowKickModal(true);
   };
 
-  // UseEffect to fetch current user's UID on component mount
   useEffect(() => {
     const initializeUser = async () => {
       try {
@@ -148,14 +133,12 @@ const GroupSettings = () => {
     initializeUser();
   }, []);
 
-  // UseEffect to fetch group details only after the current user is loaded
   useEffect(() => {
     if (isUserLoaded && currentUserId) {
       fetchGroupDetails();
     }
   }, [isUserLoaded, currentUserId]);
 
-  // Check if the current user is admin whenever `currentUserId` or `createdBy` changes
   useEffect(() => {
     if (currentUserId && createdBy) {
       setIsAdmin(currentUserId === createdBy);
@@ -171,23 +154,22 @@ const GroupSettings = () => {
           <p style={{ color: "red" }}>{error}</p>
         ) : (
           <>
-            {/* Display group name */}
             <h4>Group Name: {groupData?.groupName || "Unknown"}</h4>
 
-            {/* Display group members */}
             <h5 className="mt-4">Members</h5>
             <ListGroup>
               {groupData && groupData.members.length > 0 ? (
                 groupData.members.map((memberId) => (
                   <ListGroup.Item key={memberId} className="d-flex justify-content-between align-items-center">
-                    {/* Display username instead of member ID */}
+                    {/* Wrap the username with a Link to the user profile page */}
                     <div>
-                      {usernames[memberId] || "Loading..."}
+                      <Link to={`/user/${memberId}`} style={{ textDecoration: "none", color: "inherit" }}>
+                        {usernames[memberId] || "Loading..."}
+                      </Link>
                       {memberId === createdBy && (
                         <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />
                       )}
                     </div>
-                    {/* Only show the "Remove" button if the current user is the admin */}
                     {isAdmin && (
                       <Button variant="danger" size="sm" onClick={() => confirmKickMember(memberId)} disabled={loading}>
                         KICK
