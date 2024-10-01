@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap"; 
-import { auth } from "../firebaseConfig"; 
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebaseConfig"; 
+import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import BellIcon from "../assets/bell.svg"; // Import your bell icon
 import Notify from "../components/notify";
@@ -12,9 +12,35 @@ const MainNavbar = () => {
   const [loading, setLoading] = useState(true);
   const [showNotificationBox, setShowNotificationBox] = useState(false);
   const [hasPendingInvitations, setHasPendingInvitations] = useState(false); // Track if there are pending invitations
+  const [pendingInvitations, setPendingInvitations] = useState([]); // Store the pending invitations
   const [currentUser, setCurrentUser] = useState(null); // Store the current authenticated user
   const db = getFirestore();
 
+  // Function to fetch pending invitations for the current user
+  const fetchPendingInvitations = async (userId) => {
+    setLoading(true);
+    try {
+      const invitationsRef = collection(db, "users", userId, "pendingInvitations");
+      const pendingQuery = query(invitationsRef, where("status", "==", "pending"));
+      const querySnapshot = await getDocs(pendingQuery);
+
+      const invitations = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setPendingInvitations(invitations);
+      
+      // Notify the component state if there are any pending invitations
+      setHasPendingInvitations(invitations.length > 0);
+    } catch (error) {
+      console.error("Error fetching pending invitations:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch the username and pending invitations when user logs in
   useEffect(() => {
     const fetchUserName = async (userId) => {
       try {
@@ -37,10 +63,15 @@ const MainNavbar = () => {
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
+        setCurrentUser(user);
         fetchUserName(user.uid);
+        fetchPendingInvitations(user.uid); // Fetch invitations when user is authenticated immediately on login
       } else {
         setUserName("Guest"); // Set as guest if no user is authenticated
+        setCurrentUser(null);
         setLoading(false); // Stop loading
+        setPendingInvitations([]); // Clear pending invitations
+        setHasPendingInvitations(false); // Reset state
       }
     });
 
@@ -122,7 +153,12 @@ const MainNavbar = () => {
                   }}
                 >
                   {/* Call Notify Component Here */}
-                  <Notify currentUser={currentUser} setHasPendingInvitations={setHasPendingInvitations} />
+                  <Notify 
+                    currentUser={currentUser} 
+                    setHasPendingInvitations={setHasPendingInvitations} 
+                    pendingInvitations={pendingInvitations} 
+                    setPendingInvitations={setPendingInvitations} 
+                  />
                 </div>
               )}
 
@@ -149,8 +185,6 @@ const MainNavbar = () => {
           </Navbar.Collapse>
         </Container>
       </Navbar>
-
-
     </>
   );
 };

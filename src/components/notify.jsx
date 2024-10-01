@@ -1,38 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { collection, doc, getDocs, updateDoc, query, where, deleteDoc, arrayUnion } from "firebase/firestore";
-import { db, auth } from "../firebaseConfig";
-import { onAuthStateChanged } from "firebase/auth";
+import { doc, updateDoc, deleteDoc, arrayUnion } from "firebase/firestore";
+import { db } from "../firebaseConfig";
 import { ListGroup, Button, Spinner } from "react-bootstrap";
 
-const Notify = ({ setHasPendingInvitations }) => {
-  const [pendingInvitations, setPendingInvitations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-
-  // Fetch pending invitations for the current user
-  const fetchPendingInvitations = async (userId) => {
-    setLoading(true);
-    try {
-      const invitationsRef = collection(db, "users", userId, "pendingInvitations");
-      const pendingQuery = query(invitationsRef, where("status", "==", "pending"));
-      const querySnapshot = await getDocs(pendingQuery);
-
-      const invitations = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      setPendingInvitations(invitations);
-      
-      // Notify the parent component if there are any pending invitations
-      setHasPendingInvitations(invitations.length > 0);
-      
-    } catch (error) {
-      console.error("Error fetching pending invitations:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+const Notify = ({ currentUser, pendingInvitations, setPendingInvitations, setHasPendingInvitations }) => {
+  const [loading, setLoading] = useState(false);
 
   const handleAccept = async (invitation) => {
     try {
@@ -85,22 +57,6 @@ const Notify = ({ setHasPendingInvitations }) => {
       setLoading(false);
     }
   };
-
-  // Track authentication state and fetch invitations on mount
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setCurrentUser(user);
-        fetchPendingInvitations(user.uid); // Fetch invitations when user is authenticated immediately on mount
-      } else {
-        setCurrentUser(null);
-        setPendingInvitations([]);
-        setHasPendingInvitations(false); // No pending invitations when no user is logged in
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   return (
     <>
