@@ -5,8 +5,7 @@ import { auth, db } from "../firebaseConfig";
 import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import BellIcon from "../assets/bell.svg"; // Import your bell icon
-import Notify from "../components/notify";
-import { Link } from "react-router-dom"; // Import Link for client-side navigation
+import Notify from "../components/notify"; // Import Link for client-side navigation
 
 const MainNavbar = () => {
   const [userName, setUserName] = useState("");

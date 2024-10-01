@@ -14,6 +14,7 @@ import Ai from "./main_pages/ai/ai.jsx";
 import MainHome from "./main_pages/mainhome/mainhome.jsx";
 import MainGroup from "./main_pages/maingroup/maingroup.jsx";
 import GroupSettings from "./main_pages/group/grpsettings.jsx";
+import ReaderView from "./components/ReaderView.jsx";
 
 const router = createBrowserRouter([
   {
@@ -21,44 +22,52 @@ const router = createBrowserRouter([
     element: <Home />,
   },
   {
-    path: "home", // Explicit "home" route
+    path: "/home", // Explicit "home" route with leading slash for consistency
     element: <Home />,
   },
   {
-    path: "downloads", // Downloads page
+    path: "/downloads", // Downloads page
     element: <Downloads />,
   },
   {
-    path: "mainhome", // Main Home page
+    path: "/mainhome", // Main Home page
     element: <MainHome />,
   },
   {
-    path: "maingroup", // Main Group page
+    path: "/maingroup", // Main Group page
     element: <MainGroup />,
   },
   {
-    path: "library", // Library page
+    path: "/library", // Library page
     element: <Library />,
   },
   {
-    path: "groups/:groupId", // Dynamic group page route
+    path: "/groups/:groupId", // Dynamic group page route
     element: <Groups />,
   },
   {
-    path: "groups/:groupId/settings", // Dynamic group settings page route
+    path: "/groups/:groupId/settings", // Dynamic group settings page route
     element: <GroupSettings />,
   },
   {
-    path: "ai", // AI page
+    path: "/ai", // AI page
     element: <Ai />,
   },
   {
-    path: "signup", // Sign-up page
+    path: "/signup", // Sign-up page
     element: <SignUp />,
   },
   {
-    path: "user/:userId", // Dynamic route for user profile page
+    path: "/user/:userId", // Dynamic route for user profile page
     element: <UserAccount />, // Render UserAccount component based on userId
+  },
+  {
+    path: "/read/:urlId", // Dynamic route for ReaderView page
+    element: <ReaderView />, // Render ReaderView component based on urlId
+  },
+  {
+    path: "*", // Catch-all route for undefined paths
+    element: <div>Page not found!</div>,
   },
 ]);
 
