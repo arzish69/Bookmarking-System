@@ -24,11 +24,12 @@ const ReaderView = () => {
         if (urlDoc.exists()) {
           const urlData = urlDoc.data();
 
-          // Use the backend proxy to fetch content instead of direct URL fetch
+          // Use the backend proxy to fetch plain text content instead of direct URL fetch
           const response = await fetch(`http://localhost:5000/proxy?url=${encodeURIComponent(urlData.url)}`);
-          const { content: fetchedContent } = await response.json(); // Expect JSON response with content
+          const data = await response.json(); // Fetch the JSON object
+          const fetchedContent = data.content; // Extract the content field from the response
 
-          setContent(fetchedContent); // Set the fetched HTML content
+          setContent(fetchedContent); // Set the plain text content
         }
       } catch (error) {
         console.error("Error fetching URL content:", error);
@@ -46,10 +47,10 @@ const ReaderView = () => {
       {loading ? (
         <Spinner animation="border" />
       ) : (
-        <div
-          style={{ padding: "20px", border: "1px solid #ccc", borderRadius: "5px", backgroundColor: "#f8f9fa" }}
-          dangerouslySetInnerHTML={{ __html: content }} // Use dangerouslySetInnerHTML to render the HTML content
-        />
+        <div style={{ whiteSpace: "pre-wrap", padding: "20px", lineHeight: "1.6" }}>
+          {/* Display the plain text content */}
+          {content}
+        </div>
       )}
     </div>
   );

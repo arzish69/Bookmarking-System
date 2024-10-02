@@ -1,0 +1,36 @@
+/* ReaderView.css */
+
+.reader-content {
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;
+    background-color: #f7f7f7;
+    border-radius: 10px;
+  }
+  
+  .reader-content p {
+    font-size: 1.1em;
+    line-height: 1.8;
+    margin-bottom: 1em;
+  }
+  
+  .reader-content h1, .reader-content h2, .reader-content h3 {
+    font-weight: bold;
+    margin-top: 1.2em;
+  }
+  
+  .reader-content ul, .reader-content ol {
+    margin-left: 20px;
+  }
+  
+  .reader-content blockquote {
+    margin: 1.5em 0;
+    padding: 10px 20px;
+    border-left: 5px solid #ddd;
+    background: #f9f9f9;
+  }
+  
+  .reader-content strong {
+    font-weight: bold;
+  }
+  
