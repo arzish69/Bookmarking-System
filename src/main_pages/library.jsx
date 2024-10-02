@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
-import MainNavbar from "./main_navbar";
+import { Link, useNavigate } from "react-router-dom"; // Import Link and useNavigate from react-router-dom
+import MainNavbar from "../main_pages/main_navbar"; // Adjust the path to match your project structure
 import "bootstrap/dist/css/bootstrap.min.css";
 import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; 
 import { db, auth } from "../firebaseConfig"; 
 import Spinner from "react-bootstrap/Spinner";
 import dustbinIcon from "../assets/dustbin.svg"; // Adjust the path to your SVG accordingly
 
-const SideNav = () => {
+const Library = () => {
   const [url, setUrl] = useState("");
-  const [title, setTitle] = useState(""); 
+  const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [urls, setUrls] = useState([]); // Initially, set as an empty array
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [processingUrl, setProcessingUrl] = useState(null); 
+  const [processingUrl, setProcessingUrl] = useState(null);
+  const navigate = useNavigate(); // Use navigate to programmatically navigate to other pages
 
   const sidebarItems = [
     "All",
@@ -100,6 +102,7 @@ const SideNav = () => {
     setTitle("");
   };
 
+  // Delete a URL from Firestore
   const handleDelete = async (urlToDelete) => {
     setProcessingUrl(urlToDelete);
     try {
@@ -124,17 +127,25 @@ const SideNav = () => {
     }
   };
 
+  // Handle search term change
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
+  // Filter sidebar items based on search term
   const filteredSidebarItems = sidebarItems.filter(item =>
     item.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Filter saved URLs based on search term
   const filteredUrls = urls.filter(saved =>
     saved.url.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Navigate to ReaderView with the URL id
+  const navigateToReaderView = (urlId) => {
+    navigate(`/read/${urlId}`);
+  };
 
   return (
     <>
@@ -215,9 +226,13 @@ const SideNav = () => {
               style={{ width: "50%" }}
               className="list-group-item d-flex justify-content-between align-items-center"
             >
-              <a href={saved.url} target="_blank" rel="noopener noreferrer">
+              {/* Use Link component to navigate to ReaderView */}
+              <span
+                style={{ cursor: "pointer", color: "blue" }}
+                onClick={() => navigateToReaderView(saved.id)} // Use navigate function for navigation
+              >
                 {saved.title || saved.url}
-              </a>
+              </span>
               <span className="text-muted ml-2">
                 {new Date(saved.timestamp?.seconds * 1000).toLocaleString()} {/* Display timestamp */}
               </span>
@@ -252,4 +267,4 @@ const styles = {
   },
 };
 
-export default SideNav;
+export default Library;
