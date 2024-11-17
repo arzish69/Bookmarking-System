@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Bookmarking System Extension",
-    "version": "1.0",
+    "version": "1.1",
     "description": "Save bookmarks, annotate web pages, and create sticky notes directly while browsing.",
     "permissions": [
       "activeTab",
@@ -10,7 +10,8 @@
       "tabs"
     ],
     "background": {
-      "service_worker": "background.js"
+      "service_worker": "background.js",
+      "type": "module"
     },
     "action": {
       "default_popup": "popup.html",
@@ -24,7 +25,7 @@
       {
         "matches": ["<all_urls>"], 
         "js": ["content.js"],
-        "css": ["content.css"]
+        "css": ["conten.css"]
       }
     ],
     "host_permissions": [
