@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Import Link and useNavigate from react-router-dom
-import MainNavbar from "../main_pages/main_navbar"; // Adjust the path to match your project structure
+import { Link, useNavigate } from "react-router-dom"; 
+import MainNavbar from "../main_pages/main_navbar"; 
 import "bootstrap/dist/css/bootstrap.min.css";
 import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; 
 import { db, auth } from "../firebaseConfig"; 
 import Spinner from "react-bootstrap/Spinner";
-import dustbinIcon from "../assets/dustbin.svg"; // Adjust the path to your SVG accordingly
+import Modal from "react-bootstrap/Modal"; // Import Modal from react-bootstrap
+import Button from "react-bootstrap/Button";
+import dustbinIcon from "../assets/dustbin.svg"; 
 
 const Library = () => {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [urls, setUrls] = useState([]); // Initially, set as an empty array
+  const [urls, setUrls] = useState([]); 
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [processingUrl, setProcessingUrl] = useState(null);
-  const navigate = useNavigate(); // Use navigate to programmatically navigate to other pages
+  const [showModal, setShowModal] = useState(false); // State for modal visibility
+  const navigate = useNavigate(); 
 
   const sidebarItems = [
     "All",
@@ -27,29 +30,23 @@ const Library = () => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
-        // Fetch URLs for the logged-in user
         fetchSavedUrls(user);
       } else {
-        // Clear state when logged out
         setUrls([]);
         localStorage.removeItem("savedUrls");
       }
     });
-
-    // Cleanup the subscription
     return () => unsubscribe();
   }, []);
 
-  // Function to fetch saved URLs from Firestore for the current user
   const fetchSavedUrls = async (user) => {
     setLoading(true);
     try {
-      if (!user) return; // Ensure the user exists
-
+      if (!user) return;
       const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
       const savedUrls = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
       setUrls(savedUrls);
-      localStorage.setItem("savedUrls", JSON.stringify(savedUrls)); // Store in localStorage
+      localStorage.setItem("savedUrls", JSON.stringify(savedUrls));
     } catch (error) {
       console.error("Error fetching URLs:", error);
       setMessage("Error fetching URLs.");
@@ -58,12 +55,9 @@ const Library = () => {
     }
   };
 
-  // Function to handle form submission (save URL with timestamp)
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const encodedUrl = encodeURI(url);
-
     const urlPattern = new RegExp("^(https?:\\/\\/)?([\\w.-]+)+(\\/[\\w- ./?%&=]*)?$");
     if (!urlPattern.test(encodedUrl)) {
       setMessage("Invalid URL format.");
@@ -76,42 +70,35 @@ const Library = () => {
     }
 
     setProcessingUrl(encodedUrl);
-
     try {
       const user = auth.currentUser;
       if (!user) return;
-
-      const timestamp = new Date(); // Save the current timestamp
-
+      const timestamp = new Date(); 
       await addDoc(collection(db, "users", user.uid, "links"), { 
         url: encodedUrl, 
         title, 
         timestamp 
       });
-
       setMessage("Webpage URL saved successfully.");
-      fetchSavedUrls(user); // Fetch updated URLs for the current user
+      fetchSavedUrls(user);
     } catch (error) {
       console.error("Error saving webpage:", error);
       setMessage("Error saving webpage.");
     } finally {
       setProcessingUrl(null);
     }
-
     setUrl("");
     setTitle("");
+    setShowModal(false); // Close the modal after submission
   };
 
-  // Delete a URL from Firestore
   const handleDelete = async (urlToDelete) => {
     setProcessingUrl(urlToDelete);
     try {
       const user = auth.currentUser;
       if (!user) return;
-
       const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
       const docToDelete = querySnapshot.docs.find(doc => doc.data().url === urlToDelete);
-
       if (docToDelete) {
         await deleteDoc(doc(db, "users", user.uid, "links", docToDelete.id));
         setMessage("URL deleted successfully.");
@@ -127,22 +114,18 @@ const Library = () => {
     }
   };
 
-  // Handle search term change
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // Filter sidebar items based on search term
   const filteredSidebarItems = sidebarItems.filter(item =>
     item.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Filter saved URLs based on search term
   const filteredUrls = urls.filter(saved =>
     saved.url.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Navigate to ReaderView with the URL id
   const navigateToReaderView = (urlId) => {
     navigate(`/read/${urlId}`);
   };
@@ -174,51 +157,24 @@ const Library = () => {
         </ul>
       </div>
 
+
+
       <div className="container" style={{ marginLeft: "270px", marginTop: "80px" }}>
-        <h1>Paste Your Link</h1>
-        <form onSubmit={handleSubmit} className="mt-4">
-          <div className="form-group">
-            <label htmlFor="title">Title:</label>
-            <input
-              type="text"
-              className="form-control"
-              style={{ width: "50%" }}
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter a title for the webpage"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="url">URL:</label>
-            <input
-              type="url"
-              className="form-control"
-              style={{ width: "50%" }}
-              id="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="Enter the webpage URL"
-              required
-            />
-          </div>
-          <button type="submit" className="btn btn-primary mt-3">
-            Save Webpage
-          </button>
-        </form>
-
-        {message && (
-          <div
-            className={`alert mt-4 ${message.includes("Error") ? "alert-danger" : "alert-info"}`}
-            style={{ width: "50%" }}
-            role="alert"
-          >
-            {message}
-          </div>
-        )}
-
-        <h2 className="mt-5">Saved URLs</h2>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '380px' }}>
+        <Button
+          variant="primary"
+          onClick={() => setShowModal(true)}
+          style={{ marginRight: '10px' }} // Add spacing here
+        >
+          Add a Bookmark
+        </Button>
+        <Button variant="primary" onClick={() => setShowModal(true)}>
+          Add a PDF
+        </Button>
+      </div>
+        <div className="d-flex justify-content-between align-items-center">
+          <h2>Saved Bookmarks</h2>
+        </div>
         <ul className="list-group mt-3">
           {filteredUrls.map((saved, index) => (
             <li
@@ -226,15 +182,14 @@ const Library = () => {
               style={{ width: "50%" }}
               className="list-group-item d-flex justify-content-between align-items-center"
             >
-              {/* Use Link component to navigate to ReaderView */}
               <span
                 style={{ cursor: "pointer", color: "blue" }}
-                onClick={() => navigateToReaderView(saved.id)} // Use navigate function for navigation
+                onClick={() => navigateToReaderView(saved.id)}
               >
                 {saved.title || saved.url}
               </span>
               <span className="text-muted ml-2">
-                {new Date(saved.timestamp?.seconds * 1000).toLocaleString()} {/* Display timestamp */}
+                {new Date(saved.timestamp?.seconds * 1000).toLocaleString()}
               </span>
               {processingUrl === saved.url && (
                 <Spinner animation="border" size="sm" variant="primary" className="ml-2" />
@@ -242,14 +197,61 @@ const Library = () => {
               <img
                 src={dustbinIcon}
                 alt="Delete"
-                style={{ width: "20px", cursor: "pointer" }} // Adjust size if needed
+                style={{ width: "20px", cursor: "pointer" }}
                 onClick={() => handleDelete(saved.url)}
-                disabled={processingUrl === saved.url} // Disabled condition
+                disabled={processingUrl === saved.url}
               />
             </li>
           ))}
         </ul>
       </div>
+
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Add a Bookmark</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="title">Title:</label>
+              <input
+                type="text"
+                className="form-control"
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter a title for the webpage"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="url">URL:</label>
+              <input
+                type="url"
+                className="form-control"
+                id="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="Enter the webpage URL"
+                required
+              />
+            </div>
+            <Button type="submit" className="btn btn-primary mt-3">
+              Save Webpage
+            </Button>
+          </form>
+        </Modal.Body>
+      </Modal>
+
+      {message && (
+        <div
+          className={`alert mt-4 ${message.includes("Error") ? "alert-danger" : "alert-info"}`}
+          style={{ width: "50%", marginLeft: "270px" }}
+          role="alert"
+        >
+          {message}
+        </div>
+      )}
     </>
   );
 };
