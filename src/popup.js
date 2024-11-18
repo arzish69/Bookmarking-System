@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -27,16 +27,33 @@ const registerButton = document.getElementById('register');
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 
+// Debug element references
+console.log({
+    loginForm,
+    loggedInDiv,
+    saveBookmarkButton,
+    logoutButton,
+    loginButton,
+    registerButton,
+    emailInput,
+    passwordInput
+});
+
 // Check Auth State
 onAuthStateChanged(auth, (user) => {
     if (user) {
         loginForm.style.display = 'none';
         loggedInDiv.style.display = 'block';
+        loggedInDiv.setAttribute('aria-hidden', 'false');
+        loginForm.setAttribute('aria-hidden', 'true');
     } else {
         loginForm.style.display = 'block';
         loggedInDiv.style.display = 'none';
+        loggedInDiv.setAttribute('aria-hidden', 'true');
+        loginForm.setAttribute('aria-hidden', 'false');
     }
 });
+
 
 // Login
 loginButton.addEventListener('click', async () => {
@@ -74,18 +91,52 @@ logoutButton.addEventListener('click', async () => {
 
 // Save Bookmark
 saveBookmarkButton.addEventListener('click', async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) {
-        const url = tab.url;
-        try {
-            await addDoc(collection(db, 'bookmarks'), {
-                url,
-                userId: auth.currentUser.uid,
-                createdAt: new Date()
-            });
-            alert('Bookmark saved!');
-        } catch (error) {
-            alert(`Failed to save bookmark: ${error.message}`);
+    console.log('Save Bookmark button clicked');
+
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) {
+            alert('No active tab detected.');
+            return;
         }
+
+        // Validate URL format
+        const url = tab.url;
+        const encodedUrl = encodeURI(url);
+        const urlPattern = new RegExp("^(https?:\\/\\/)?([\\w.-]+)+(\\/[\\w- ./?%&=]*)?$");
+        if (!urlPattern.test(encodedUrl)) {
+            alert("Invalid URL format.");
+            return;
+        }
+
+        const user = auth.currentUser;
+        if (!user) {
+            alert('You need to log in to save a bookmark.');
+            return;
+        }
+
+        // Check for duplicates
+        const linksRef = collection(db, "users", user.uid, "links");
+        const querySnapshot = await getDocs(linksRef);
+        const urls = querySnapshot.docs.map(doc => doc.data().url);
+
+        if (urls.includes(encodedUrl)) {
+            alert("This URL has already been saved.");
+            return;
+        }
+
+        // Save bookmark
+        const timestamp = new Date();
+        await addDoc(linksRef, {
+            url: encodedUrl,
+            title: tab.title || "Untitled", // Use the tab's title if available
+            timestamp
+        });
+
+        alert("Bookmark saved successfully.");
+    } catch (error) {
+        console.error('Failed to save bookmark:', error);
+        alert(`Error saving bookmark: ${error.message}`);
     }
 });
+

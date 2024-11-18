@@ -34,6 +34,6 @@ button:hover {
 }
 
 /* Hidden sections */
-#logged-in, #save-bookmark {
+#logged-in {
   display: none;
 }
