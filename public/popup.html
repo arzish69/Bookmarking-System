@@ -2,13 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Bookmarking Extension</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookmarking System</title>
   <link rel="stylesheet" href="./popu.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Bookmark Manager</h1>
-    <button id="saveBookmark">Save Bookmark</button>
+  <div id="login-form">
+    <h3>Login</h3>
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button id="login">Login</button>
+    <p>Don't have an account? <button id="register">Register</button></p>
+  </div>
+  <div id="logged-in">
+    <h3>Welcome</h3>
+    <p>You are logged in.</p>
+    <button id="save-bookmark">Save Bookmark</button>
+    <button id="logout">Logout</button>
   </div>
   <script type="module" src="./popup.js"></script>
 </body>
