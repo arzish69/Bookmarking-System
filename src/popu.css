@@ -37,3 +37,19 @@ button:hover {
 #logged-in {
   display: none;
 }
+
+/* Add styles for the link */
+#app-link {
+  text-align: center;
+  margin-top: 10px;
+}
+
+#app-link a {
+  text-decoration: none;
+  color: #4CAF50;
+  font-size: 12px;
+}
+
+#app-link a:hover {
+  text-decoration: underline;
+}
