@@ -5,27 +5,12 @@ import { db, auth } from "../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
 
-// Sanitize content to ensure compatibility with Firestore
-const sanitizeContent = (content) => {
-  return content
-    .map((item) => {
-      if (item.type === "text") {
-        // Ensure only valid text is saved
-        return { type: "text", html: item.html || "" };
-      } else if (item.type === "image") {
-        // Ensure only valid image URLs are saved
-        return { type: "image", src: item.src || "" };
-      }
-      return null; // Exclude unsupported types
-    })
-    .filter(Boolean); // Remove null or invalid entries
-};
-
 const ReaderView = () => {
   const { urlId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [content, setContent] = useState([]);
+  const [content, setContent] = useState("");
+  const [readingTime, setReadingTime] = useState(null);
   const [error, setError] = useState(null);
   const [originalUrl, setOriginalUrl] = useState("");
   const [user, setUser] = useState(null);
@@ -57,28 +42,32 @@ const ReaderView = () => {
           const urlData = urlDoc.data();
           setOriginalUrl(urlData.url);
 
-          // Check if processed content is already in Firebase
-          if (urlData.content) {
-            console.log("Content fetched from Firebase cache");
-            setContent(urlData.content);
-          } else {
-            // Fallback to fetching from backend `/proxy`
-            console.log("Fetching content from /proxy");
-            const response = await fetch(`http://localhost:5000/proxy?url=${encodeURIComponent(urlData.url)}`);
-            const data = await response.json();
+          // Fetch content from Flask backend
+          console.log("Fetching content from Flask backend");
+          const response = await fetch(
+            `http://localhost:5000/readerview?url=${encodeURIComponent(urlData.url)}`
+          );
 
-            if (data.content) {
-              // Sanitize the content
-              const sanitizedContent = sanitizeContent(data.content);
-              setContent(sanitizedContent);
-
-              // Save sanitized content back to Firebase
-              await setDoc(urlDocRef, { ...urlData, content: sanitizedContent }, { merge: true });
-              console.log("Sanitized content saved to Firebase");
-            } else {
-              throw new Error("No content available from /proxy");
-            }
+          if (!response.ok) {
+            throw new Error("Failed to fetch content from the backend");
           }
+
+          const data = await response.json();
+
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          setContent(data.content);
+          setReadingTime(data.estimated_reading_time);
+
+          // Optionally save the processed content back to Firebase
+          await setDoc(
+            urlDocRef,
+            { ...urlData, content: data.content },
+            { merge: true }
+          );
+          console.log("Processed content saved to Firebase");
         } else {
           throw new Error("URL document does not exist");
         }
@@ -116,20 +105,8 @@ const ReaderView = () => {
         <div style={styles.error}>{error}</div>
       ) : (
         <div style={styles.content}>
-          {content.map((item, index) => {
-            if (item.type === "text") {
-              return (
-                <div
-                  key={index}
-                  style={styles.paragraph}
-                  dangerouslySetInnerHTML={{ __html: item.html }}
-                />
-              );
-            } else if (item.type === "image") {
-              return <img key={index} src={item.src} alt="" style={styles.image} />;
-            }
-            return null;
-          })}
+          <h4>Estimated Reading Time: {readingTime} minutes</h4>
+          <p>{content}</p>
         </div>
       )}
     </div>
@@ -166,15 +143,6 @@ const styles = {
     fontSize: "18px",
     lineHeight: "1.6",
     color: "#333",
-  },
-  paragraph: {
-    margin: "10px 0",
-  },
-  image: {
-    maxWidth: "100%",
-    height: "auto",
-    borderRadius: "4px",
-    margin: "10px 0",
   },
   error: {
     color: "red",
