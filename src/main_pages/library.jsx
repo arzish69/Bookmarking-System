@@ -12,7 +12,9 @@ import dustbinIcon from "../assets/dustbin.svg";
 const Library = () => {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
+  const [tags, setTags] = useState(""); // State for tags input
   const [message, setMessage] = useState("");
+  const [username, setUsername] = useState("");
   const [urls, setUrls] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -93,6 +95,15 @@ const Library = () => {
     }
   };
 
+  const handleBulkSelect = () => {
+    if (selectionMode) {
+      setSelectedBookmarks(urls.map((bookmark) => bookmark.id)); // Select all bookmarks
+    } else {
+      setMessage("Enable selection mode first.");
+    }
+  };
+  
+
   const handleShareToGroup = async () => {
     try {
       const user = auth.currentUser;
@@ -137,10 +148,23 @@ const Library = () => {
   const handleSendToGroups = async () => {
     try {
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) {
+        setMessage("User not authenticated.");
+        return;
+      }
   
-      const userId = user.uid;
-      const username = user.displayName || "Anonymous"; // Replace with user's name if available
+      const userId = user.uid; // Correct field for user ID
+  
+      // Fetch the user's document from Firestore
+      const userDocRef = doc(db, "users", userId); // Reference to the user's document
+      const userDoc = await getDoc(userDocRef);
+  
+      let username = "Anonymous"; // Default value if no username is found
+      if (userDoc.exists()) {
+        username = userDoc.data()?.username || "Anonymous"; // Get username or default
+      } else {
+        console.error("No such document for the user in Firestore!");
+      }
   
       const timestamp = new Date();
       for (const groupId of selectedGroups) {
@@ -168,6 +192,7 @@ const Library = () => {
       setMessage("Error sharing bookmarks.");
     }
   };
+  
   
 
   const handleDelete = async (urlToDelete) => {
@@ -230,14 +255,17 @@ const Library = () => {
       if (!user) return;
 
       const timestamp = new Date();
+      const tagsArray = tags.split(" ").filter((tag) => tag.trim() !== ""); // Split tags by space
+
       await addDoc(collection(db, "users", user.uid, "links"), {
         url: encodedUrl,
         title,
+        tags: tagsArray,
         timestamp,
       });
 
       setMessage("Webpage URL saved successfully.");
-      fetchSavedUrls(user); // Refresh the saved URLs list after adding
+      fetchSavedUrls(user);
     } catch (error) {
       console.error("Error saving the webpage:", error);
       setMessage("Error saving the webpage.");
@@ -245,7 +273,8 @@ const Library = () => {
 
     setUrl("");
     setTitle("");
-    setShowModal(false); // Close the modal after submission
+    setTags(""); // Reset tags input
+    setShowModal(false); // Close the modal
   };
 
   return (
@@ -289,24 +318,25 @@ const Library = () => {
           </Button>
         </div>
         <div className="d-flex justify-content-between align-items-center">
-          <h2>Saved Bookmarks</h2>
+          <h1>Saved Bookmarks</h1>
         </div>
         <ul className="list-group mt-3">
-          {filteredUrls.map((saved, index) => {
-            const bookmarkStyle = {
-              backgroundColor:
-                selectionMode && selectedBookmarks.includes(saved.id) ? "lightblue" : "white",
-              cursor: selectionMode ? "pointer" : "default",
-              width: "65%",
-            };
+        {filteredUrls.map((saved, index) => {
+          const bookmarkStyle = {
+            backgroundColor:
+              selectionMode && selectedBookmarks.includes(saved.id) ? "lightblue" : "white",
+            cursor: selectionMode ? "pointer" : "default",
+            width: "65%",
+          };
 
-            return (
-              <li
-                key={index}
-                className="list-group-item d-flex justify-content-between align-items-center"
-                style={bookmarkStyle}
-                onClick={() => toggleBookmarkSelection(saved.id)}
-              >
+          return (
+            <li
+              key={index}
+              className="list-group-item d-flex flex-column justify-content-between align-items-start"
+              style={bookmarkStyle}
+              onClick={() => toggleBookmarkSelection(saved.id)}
+            >
+              <div className="d-flex w-100 justify-content-between">
                 <span
                   style={{
                     cursor: selectionMode ? "default" : "pointer",
@@ -319,7 +349,27 @@ const Library = () => {
                 <span className="text-muted ml-2">
                   {new Date(saved.timestamp?.seconds * 1000).toLocaleString()}
                 </span>
-                {!selectionMode && (
+              </div>
+              {/* Tags Display */}
+              <div style={{ fontSize: "12px", color: "gray", marginTop: "5px" }}>
+                {saved.tags?.map((tag, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      display: "inline-block",
+                      backgroundColor: "#f0f0f0",
+                      borderRadius: "3px",
+                      padding: "2px 6px",
+                      marginRight: "5px",
+                      marginBottom: "5px",
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              {!selectionMode && (
+                <div style={{ marginTop: "10px", alignSelf: "flex-end" }}>
                   <img
                     src={dustbinIcon}
                     alt="Delete"
@@ -327,11 +377,12 @@ const Library = () => {
                     onClick={() => handleDelete(saved.url)}
                     disabled={processingUrl === saved.url}
                   />
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
       </div>
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
@@ -364,6 +415,17 @@ const Library = () => {
                 required
               />
             </div>
+            <div className="form-group">
+              <label htmlFor="tags">Tags (separate with spaces):</label>
+              <input
+                type="text"
+                className="form-control"
+                id="tags"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="e.g., work research personal"
+              />
+            </div>
             <Button type="submit" className="btn btn-primary mt-3">
               Save Webpage
             </Button>
@@ -385,7 +447,7 @@ const Library = () => {
                 margin: "0",
                 padding: "0",
                 border: "1px solid #ddd",
-                borderRadius: "5px",
+                borderRadius: "2px",
               }}
             >
               {userGroups.map((group) => (
@@ -394,10 +456,11 @@ const Library = () => {
                   style={{
                     ...styles.listGroupItem,
                     ...(selectedGroups.includes(group.id) ? styles.groupItemActive : {}),
+                    
                   }}
                   onClick={() => toggleGroupSelection(group.id)}
                 >
-                  {group.name}
+                  {group.groupName}
                 </li>
               ))}
             </ul>
@@ -427,9 +490,16 @@ const Library = () => {
         </div>
       )}
 
-      {selectionMode && selectedBookmarks.length > 0 && (
+      {selectionMode && selectedBookmarks.length >= 0 && (
         <div style={styles.footer}>
           <span>{selectedBookmarks.length} item(s) selected</span>
+          <Button
+            variant="secondary"
+            onClick={handleBulkSelect}
+            style={{ marginLeft: "15px" }}
+          >
+            Bulk Select
+          </Button>
           <Button
             variant="danger"
             onClick={handleDeleteSelected}
