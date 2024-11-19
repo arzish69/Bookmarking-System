@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainNavbar from "../main_pages/main_navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, getDoc, doc } from "firebase/firestore";
 import { db, auth } from "../firebaseConfig";
 import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal";
@@ -20,6 +20,9 @@ const Library = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false); // Tracks selection mode
   const [selectedBookmarks, setSelectedBookmarks] = useState([]); // Tracks selected bookmarks
+  const [showShareModal, setShowShareModal] = useState(false); // Tracks if the share modal is visible
+  const [userGroups, setUserGroups] = useState([]); // List of groups the user is part of
+  const [selectedGroups, setSelectedGroups] = useState([]); // Selected groups for sharing
   const navigate = useNavigate();
 
   const sidebarItems = ["All", "Annotate", "AI Summarizer", "Organize"];
@@ -90,9 +93,82 @@ const Library = () => {
     }
   };
 
-  const handleShareToGroup = () => {
-    alert(`Sharing ${selectedBookmarks.length} item(s) to a group.`);
+  const handleShareToGroup = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        console.error("User not authenticated.");
+        setMessage("You need to be logged in to share bookmarks.");
+        return;
+      }
+  
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        const userGroups = userDoc.data().groups || [];
+  
+        const groupList = await Promise.all(
+          userGroups.map(async (groupId) => {
+            const groupDoc = await getDoc(doc(db, "groups", groupId));
+            return groupDoc.exists() ? { id: groupDoc.id, ...groupDoc.data() } : null;
+          })
+        );
+  
+        setUserGroups(groupList.filter((group) => group !== null)); // Filter out non-existent groups
+        setShowShareModal(true); // Open the share modal
+      } else {
+        console.error("User document does not exist.");
+        setMessage("Unable to fetch groups.");
+      }
+    } catch (error) {
+      console.error("Error fetching groups:", error);
+      setMessage("Error fetching groups.");
+    }
+  };  
+  
+
+  const toggleGroupSelection = (groupId) => {
+    setSelectedGroups((prev) =>
+      prev.includes(groupId)
+        ? prev.filter((id) => id !== groupId)
+        : [...prev, groupId]
+    );
   };
+
+  const handleSendToGroups = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+  
+      const userId = user.uid;
+      const username = user.displayName || "Anonymous"; // Replace with user's name if available
+  
+      const timestamp = new Date();
+      for (const groupId of selectedGroups) {
+        for (const bookmarkId of selectedBookmarks) {
+          const bookmark = urls.find((item) => item.id === bookmarkId);
+          if (bookmark) {
+            await addDoc(collection(db, "groups", groupId, "sharedUrls"), {
+              sharedBy: username,
+              sharedById: userId,
+              timestamp,
+              title: bookmark.title,
+              url: bookmark.url,
+            });
+          }
+        }
+      }
+  
+      setMessage("Bookmarks shared successfully.");
+      setShowShareModal(false); // Close the share modal
+      setSelectedGroups([]); // Clear selected groups
+      setSelectedBookmarks([]); // Clear selected bookmarks
+      setSelectionMode(false); // Exit selection mode
+    } catch (error) {
+      console.error("Error sharing bookmarks:", error);
+      setMessage("Error sharing bookmarks.");
+    }
+  };
+  
 
   const handleDelete = async (urlToDelete) => {
     setProcessingUrl(urlToDelete);
@@ -295,6 +371,52 @@ const Library = () => {
         </Modal.Body>
       </Modal>
 
+      <Modal show={showShareModal} onHide={() => setShowShareModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Share to Groups</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+        <div style={{ maxHeight: "300px", overflowY: "auto", padding: "0" }}>
+          {userGroups.length > 0 ? (
+            <ul
+              className="list-group"
+              style={{
+                width: "100%",
+                margin: "0",
+                padding: "0",
+                border: "1px solid #ddd",
+                borderRadius: "5px",
+              }}
+            >
+              {userGroups.map((group) => (
+                <li
+                  key={group.id}
+                  style={{
+                    ...styles.listGroupItem,
+                    ...(selectedGroups.includes(group.id) ? styles.groupItemActive : {}),
+                  }}
+                  onClick={() => toggleGroupSelection(group.id)}
+                >
+                  {group.name}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ textAlign: "center" }}>No groups found.</p>
+          )}
+        </div>
+      </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowShareModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSendToGroups}>
+            Send
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+
       {message && (
         <div
           className={`alert mt-4 ${message.includes("Error") ? "alert-danger" : "alert-info"}`}
@@ -350,6 +472,21 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+  },
+  listGroupItem: {
+    width: "100%", // Ensure full-width items
+    padding: "10px 15px", // Add proper spacing
+    cursor: "pointer", // Highlight items on hover
+    overflow: "hidden", // Prevent text overflow
+    whiteSpace: "nowrap", // Keep text in a single line
+    textOverflow: "ellipsis", // Add ellipsis for overflowed text
+    backgroundColor: "#fff", // Default background
+    borderBottom: "1px solid #ddd", // Add subtle separation
+    
+  },
+  groupItemActive: {
+    backgroundColor: "lightblue",
+    color: "black",
   },
 };
 
