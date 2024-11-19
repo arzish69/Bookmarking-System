@@ -1,34 +1,31 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; 
-import MainNavbar from "../main_pages/main_navbar"; 
+import { useNavigate } from "react-router-dom";
+import MainNavbar from "../main_pages/main_navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; 
-import { db, auth } from "../firebaseConfig"; 
+import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { db, auth } from "../firebaseConfig";
 import Spinner from "react-bootstrap/Spinner";
-import Modal from "react-bootstrap/Modal"; // Import Modal from react-bootstrap
+import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
-import dustbinIcon from "../assets/dustbin.svg"; 
+import dustbinIcon from "../assets/dustbin.svg";
 
 const Library = () => {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [urls, setUrls] = useState([]); 
+  const [urls, setUrls] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [processingUrl, setProcessingUrl] = useState(null);
-  const [showModal, setShowModal] = useState(false); // State for modal visibility
-  const navigate = useNavigate(); 
+  const [showModal, setShowModal] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false); // Tracks selection mode
+  const [selectedBookmarks, setSelectedBookmarks] = useState([]); // Tracks selected bookmarks
+  const navigate = useNavigate();
 
-  const sidebarItems = [
-    "All",
-    "Annotate",
-    "AI Summarizer",
-    "Organize",
-  ];
+  const sidebarItems = ["All", "Annotate", "AI Summarizer", "Organize"];
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         fetchSavedUrls(user);
       } else {
@@ -55,41 +52,20 @@ const Library = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const encodedUrl = encodeURI(url);
-    const urlPattern = new RegExp("^(https?:\\/\\/)?([\\w.-]+)+(\\/[\\w- ./?%&=]*)?$");
-    if (!urlPattern.test(encodedUrl)) {
-      setMessage("Invalid URL format.");
-      return;
+  const handleToggleSelectionMode = () => {
+    setSelectionMode((prev) => !prev);
+    if (selectionMode) {
+      setSelectedBookmarks([]); // Clear selections when exiting selection mode
     }
+  };
 
-    if (urls.some((saved) => saved.url === encodedUrl)) {
-      setMessage("This URL has already been saved.");
-      return;
-    }
-
-    setProcessingUrl(encodedUrl);
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const timestamp = new Date(); 
-      await addDoc(collection(db, "users", user.uid, "links"), { 
-        url: encodedUrl, 
-        title, 
-        timestamp 
-      });
-      setMessage("Webpage URL saved successfully.");
-      fetchSavedUrls(user);
-    } catch (error) {
-      console.error("Error saving webpage:", error);
-      setMessage("Error saving webpage.");
-    } finally {
-      setProcessingUrl(null);
-    }
-    setUrl("");
-    setTitle("");
-    setShowModal(false); // Close the modal after submission
+  const toggleBookmarkSelection = (bookmarkId) => {
+    if (!selectionMode) return;
+    setSelectedBookmarks((prev) =>
+      prev.includes(bookmarkId)
+        ? prev.filter((id) => id !== bookmarkId)
+        : [...prev, bookmarkId]
+    );
   };
 
   const handleDelete = async (urlToDelete) => {
@@ -98,7 +74,7 @@ const Library = () => {
       const user = auth.currentUser;
       if (!user) return;
       const querySnapshot = await getDocs(collection(db, "users", user.uid, "links"));
-      const docToDelete = querySnapshot.docs.find(doc => doc.data().url === urlToDelete);
+      const docToDelete = querySnapshot.docs.find((doc) => doc.data().url === urlToDelete);
       if (docToDelete) {
         await deleteDoc(doc(db, "users", user.uid, "links", docToDelete.id));
         setMessage("URL deleted successfully.");
@@ -118,17 +94,58 @@ const Library = () => {
     setSearchTerm(e.target.value);
   };
 
-  const filteredSidebarItems = sidebarItems.filter(item =>
+  const filteredSidebarItems = sidebarItems.filter((item) =>
     item.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredUrls = urls.filter(saved =>
+  const filteredUrls = urls.filter((saved) =>
     saved.url.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const navigateToReaderView = (urlId) => {
-    navigate(`/read/${urlId}`);
+    if (!selectionMode) {
+      navigate(`/read/${urlId}`);
+    }
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const encodedUrl = encodeURI(url);
+    const urlPattern = new RegExp("^(https?:\\/\\/)?([\\w.-]+)+(\\/[\\w- ./?%&=]*)?$");
+
+    if (!urlPattern.test(encodedUrl)) {
+        setMessage("Invalid URL format.");
+        return;
+    }
+
+    if (urls.some((saved) => saved.url === encodedUrl)) {
+        setMessage("This URL has already been saved.");
+        return;
+    }
+
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const timestamp = new Date();
+        await addDoc(collection(db, "users", user.uid, "links"), {
+            url: encodedUrl,
+            title,
+            timestamp,
+        });
+
+        setMessage("Webpage URL saved successfully.");
+        fetchSavedUrls(user); // Refresh the saved URLs list after adding
+    } catch (error) {
+        console.error("Error saving the webpage:", error);
+        setMessage("Error saving the webpage.");
+    }
+
+    setUrl("");
+    setTitle("");
+    setShowModal(false); // Close the modal after submission
+};
+
 
   return (
     <>
@@ -157,53 +174,63 @@ const Library = () => {
         </ul>
       </div>
 
-
-
       <div className="container" style={{ marginLeft: "270px", marginTop: "80px" }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '380px' }}>
-        <Button
-          variant="primary"
-          onClick={() => setShowModal(true)}
-          style={{ marginRight: '10px' }} // Add spacing here
-        >
-          Add a Bookmark
-        </Button>
-        <Button variant="primary" onClick={() => setShowModal(true)}>
-          Add a PDF
-        </Button>
-      </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", paddingRight: "380px" }}>
+          <Button
+            variant="primary"
+            onClick={() => setShowModal(true)}
+            style={{ marginRight: "10px" }}
+          >
+            Add a Bookmark
+          </Button>
+          <Button variant="primary" onClick={handleToggleSelectionMode}>
+            {selectionMode ? "Exit Selection" : "Select"}
+          </Button>
+        </div>
         <div className="d-flex justify-content-between align-items-center">
           <h2>Saved Bookmarks</h2>
         </div>
         <ul className="list-group mt-3">
-          {filteredUrls.map((saved, index) => (
+        {filteredUrls.map((saved, index) => {
+          const bookmarkStyle = {
+            backgroundColor:
+              selectionMode && selectedBookmarks.includes(saved.id) ? "lightblue" : "white",
+            cursor: selectionMode ? "pointer" : "default",
+            width: "50%"
+          };
+
+          return (
             <li
               key={index}
-              style={{ width: "50%" }}
               className="list-group-item d-flex justify-content-between align-items-center"
+              style={bookmarkStyle} // Single unified style object
+              onClick={() => toggleBookmarkSelection(saved.id)}
             >
               <span
-                style={{ cursor: "pointer", color: "blue" }}
-                onClick={() => navigateToReaderView(saved.id)}
+                style={{
+                  cursor: selectionMode ? "default" : "pointer",
+                  color: "blue",
+                }}
+                onClick={() => !selectionMode && navigateToReaderView(saved.id)}
               >
                 {saved.title || saved.url}
               </span>
               <span className="text-muted ml-2">
                 {new Date(saved.timestamp?.seconds * 1000).toLocaleString()}
               </span>
-              {processingUrl === saved.url && (
-                <Spinner animation="border" size="sm" variant="primary" className="ml-2" />
+              {!selectionMode && (
+                <img
+                  src={dustbinIcon}
+                  alt="Delete"
+                  style={{ width: "20px", cursor: "pointer" }}
+                  onClick={() => handleDelete(saved.url)}
+                  disabled={processingUrl === saved.url}
+                />
               )}
-              <img
-                src={dustbinIcon}
-                alt="Delete"
-                style={{ width: "20px", cursor: "pointer" }}
-                onClick={() => handleDelete(saved.url)}
-                disabled={processingUrl === saved.url}
-              />
             </li>
-          ))}
-        </ul>
+          );
+        })}
+      </ul>
       </div>
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
