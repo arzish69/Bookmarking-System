@@ -29,7 +29,7 @@ const SignUp = () => {
       if (isLogin) {
         // Handle login
         await signInWithEmailAndPassword(auth, email, password);
-        navigate("/mainhome"); // Navigate to /mainhome upon success
+        navigate("/library"); // Navigate to /mainhome upon success
       } else {
         // Handle signup
         if (password !== repeatPassword) {

@@ -3,7 +3,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   build: {
-    outDir: 'dist', // Output folder for the build
+    outDir: 'extension', // Output folder for the build
     rollupOptions: {
       input: {
         background: resolve(__dirname, 'src/background.js'), // Background script
@@ -16,7 +16,7 @@ export default defineConfig({
         entryFileNames: '[name].js',        // JS files naming
         chunkFileNames: '[name].js',        // Chunk files naming
         assetFileNames: '[name].[ext]',     // Asset files naming
-        dir: 'dist',                        // Final output directory
+        dir: 'extension',                        // Final output directory
         format: 'esm',                      // Use ES modules
       },
     },

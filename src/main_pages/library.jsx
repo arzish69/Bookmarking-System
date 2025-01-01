@@ -326,7 +326,7 @@ const Library = () => {
             backgroundColor:
               selectionMode && selectedBookmarks.includes(saved.id) ? "lightblue" : "white",
             cursor: selectionMode ? "pointer" : "default",
-            width: "65%",
+            width: "40%",
           };
 
           return (
