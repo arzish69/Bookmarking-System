@@ -1,79 +1,13 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App.jsx"; // If App is needed as a main layout
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min";
-import Home from "./components/home.jsx";
-import Downloads from "./components/downloads.jsx";
-import Library from "./main_pages/library.jsx";
-import SignUp from "./components/signup.jsx";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import UserAccount from "./components/UserAccount/UserAccount.jsx";
-import Groups from "./main_pages/group/group.jsx";
-import Ai from "./main_pages/ai/ai.jsx";
-import MainHome from "./main_pages/mainhome/mainhome.jsx";
-import MainGroup from "./main_pages/maingroup/maingroup.jsx";
-import GroupSettings from "./main_pages/group/grpsettings.jsx";
-import ReaderView from "./components/ReaderView.jsx";
+import React from 'react';
+import ReactDOM from 'react-dom/client'; // Corrected ReactDOM for newer versions
+import AppRouter from './components/AppRouter.jsx'; // Adjust path as needed
+import { AuthProvider } from './components/AuthContext.jsx'; // Import the AuthContext
 
-const router = createBrowserRouter([
-  {
-    path: "/", // Home page route
-    element: <Home />,
-  },
-  {
-    path: "/home", // Explicit "home" route with leading slash for consistency
-    element: <Home />,
-  },
-  {
-    path: "/downloads", // Downloads page
-    element: <Downloads />,
-  },
-  {
-    path: "/mainhome", // Main Home page
-    element: <MainHome />,
-  },
-  {
-    path: "/maingroup", // Main Group page
-    element: <MainGroup />,
-  },
-  {
-    path: "/library", // Library page
-    element: <Library />,
-  },
-  {
-    path: "/groups/:groupId", // Dynamic group page route
-    element: <Groups />,
-  },
-  {
-    path: "/groups/:groupId/settings", // Dynamic group settings page route
-    element: <GroupSettings />,
-  },
-  {
-    path: "/ai", // AI page
-    element: <Ai />,
-  },
-  {
-    path: "/signup", // Sign-up page
-    element: <SignUp />,
-  },
-  {
-    path: "/user/:userId", // Dynamic route for user profile page
-    element: <UserAccount />, // Render UserAccount component based on userId
-  },
-  {
-    path: "/read/:urlId", // Dynamic route for ReaderView page
-    element: <ReaderView />, // Render ReaderView component based on urlId
-  },
-  {
-    path: "*", // Catch-all route for undefined paths
-    element: <div>Page not found!</div>,
-  },
-]);
-
-// Render the router
-ReactDOM.createRoot(document.getElementById("root")).render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
   </React.StrictMode>
 );
+

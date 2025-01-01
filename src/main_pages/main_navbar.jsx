@@ -6,6 +6,7 @@ import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "fi
 import { onAuthStateChanged } from "firebase/auth";
 import BellIcon from "../assets/bell.svg"; // Import your bell icon
 import Notify from "../components/notify"; // Import Link for client-side navigation
+import LogoutButton from "../components/LogoutButton";
 
 const MainNavbar = () => {
   const [userName, setUserName] = useState("");
@@ -184,7 +185,7 @@ const MainNavbar = () => {
                   </NavDropdown.Item>
                 )}
                 <NavDropdown.Divider />
-                <NavDropdown.Item href="/">Logout</NavDropdown.Item>
+                <LogoutButton />
               </NavDropdown>
             </Nav>
           </Navbar.Collapse>
