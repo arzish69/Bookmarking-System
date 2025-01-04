@@ -4,6 +4,8 @@ import { collection, getDoc, doc, setDoc } from "firebase/firestore";
 import { db, auth } from "../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
+import { FaArrowLeft, FaExternalLinkAlt } from "react-icons/fa";
+import TextAnnotationPopup from "./TextAnnotationPopup"; // Import the popup component
 
 const ReaderView = () => {
   const { urlId } = useParams();
@@ -14,15 +16,18 @@ const ReaderView = () => {
   const [error, setError] = useState(null);
   const [originalUrl, setOriginalUrl] = useState("");
   const [user, setUser] = useState(null);
+  const [title, setTitle] = useState("");
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
+  const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
-    // Listen for auth state changes
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
       } else {
         setUser(null);
-        navigate("/login"); // Redirect to login page if user is not authenticated
+        navigate("/login");
       }
     });
 
@@ -40,10 +45,9 @@ const ReaderView = () => {
 
         if (urlDoc.exists()) {
           const urlData = urlDoc.data();
+          setTitle(urlData.title);
           setOriginalUrl(urlData.url);
 
-          // Fetch content from Flask backend
-          console.log("Fetching content from Flask backend");
           const response = await fetch(
             `http://localhost:5000/readerview?url=${encodeURIComponent(urlData.url)}`
           );
@@ -53,7 +57,6 @@ const ReaderView = () => {
           }
 
           const data = await response.json();
-
           if (data.error) {
             throw new Error(data.error);
           }
@@ -61,13 +64,11 @@ const ReaderView = () => {
           setContent(data.content);
           setReadingTime(data.estimated_reading_time);
 
-          // Optionally save the processed content back to Firebase
           await setDoc(
             urlDocRef,
             { ...urlData, content: data.content },
             { merge: true }
           );
-          console.log("Processed content saved to Firebase");
         } else {
           throw new Error("URL document does not exist");
         }
@@ -82,32 +83,78 @@ const ReaderView = () => {
     fetchContent();
   }, [user, urlId]);
 
+  const handleTextSelection = (e) => {
+    const selection = window.getSelection();
+    const text = selection.toString();
+    if (text) {
+      const rect = selection.getRangeAt(0).getBoundingClientRect();
+      const popupPosition = {
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+      };
+
+      setSelectedText(text);
+      setPopupPosition(popupPosition);
+      setPopupVisible(true);
+    } else {
+      setPopupVisible(false);
+    }
+  };
+
+  const handleHighlight = (text) => {
+    console.log(`Highlighting: "${text}"`);
+    // Add highlight logic
+  };
+
+  const handleStickyNote = (noteText) => {
+    console.log(`Sticky note for: "${selectedText}", Note: "${noteText}"`);
+    // Add sticky note logic
+  };
+
+  const handleCopyText = (text) => {
+    navigator.clipboard.writeText(text);
+    console.log(`Copied: "${text}"`);
+  };
+
   if (!user) {
     return <Spinner animation="border" />;
   }
 
   return (
     <div style={styles.container}>
-      <div style={styles.header}>
-        <h2>Reader View</h2>
+      <div style={styles.navbar}>
+        <button style={styles.backButton} onClick={() => navigate("/library")}>
+          <FaArrowLeft size={20} />
+        </button>
+        <div style={styles.navContent}>
+          <h3 style={styles.title}>{title || "Loading..."}</h3>
+          {readingTime && <p style={styles.readingTime}>Estimated Time: {readingTime} min</p>}
+        </div>
         {originalUrl && (
-          <button
-            style={styles.button}
-            onClick={() => window.open(originalUrl, "_blank")}
-          >
-            View Original
-          </button>
+          <a href={originalUrl} target="_blank" rel="noopener noreferrer" style={styles.linkIcon}>
+            <FaExternalLinkAlt size={20} />
+          </a>
         )}
       </div>
-      {loading ? (
-        <Spinner animation="border" />
-      ) : error ? (
-        <div style={styles.error}>{error}</div>
-      ) : (
-        <div style={styles.content}>
-          <h4>Estimated Reading Time: {readingTime} minutes</h4>
-          <p>{content}</p>
-        </div>
+
+      <div style={styles.contentBox} onMouseUp={handleTextSelection}>
+        {loading ? (
+          <Spinner animation="border" />
+        ) : error ? (
+          <div style={styles.error}>{error}</div>
+        ) : (
+          <div style={styles.content}>{content}</div>
+        )}
+      </div>
+
+      {popupVisible && (
+        <TextAnnotationPopup
+          selectedText={selectedText}
+          position={popupPosition}
+          onHighlight={handleHighlight}
+          onStickyNote={handleStickyNote}
+          onCopyText={handleCopyText}
+        />
       )}
     </div>
   );
@@ -120,6 +167,49 @@ const styles = {
     padding: "20px",
     backgroundColor: "#f5f5f5",
     borderRadius: "8px",
+  },
+  navbar: {
+    display: "flex",
+    alignItems: "center",
+    padding: "10px",
+    backgroundColor: "#007bff",
+    borderRadius: "8px",
+    marginBottom: "20px",
+  },
+  contentBox: {
+    backgroundColor: "#fff",
+    padding: "15px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    position: "relative",
+  },
+  content: {
+    fontSize: "16px",
+    lineHeight: "1.6",
+  },
+  linkIcon: {
+    color: "#fff",
+    marginLeft: "10px",
+    cursor: "pointer",
+    fontSize: "20px",
+  },
+  backButton: {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#fff",
+    cursor: "pointer",
+  },
+  navContent: {
+    marginLeft: "20px",
+    flexGrow: 1,
+  },
+  title: {
+    color: "#fff",
+    margin: 0,
+  },
+  readingTime: {
+    color: "#fff",
+    fontSize: "14px",
   },
   header: {
     fontSize: "24px",
@@ -138,11 +228,6 @@ const styles = {
     border: "none",
     borderRadius: "4px",
     cursor: "pointer",
-  },
-  content: {
-    fontSize: "18px",
-    lineHeight: "1.6",
-    color: "#333",
   },
   error: {
     color: "red",
