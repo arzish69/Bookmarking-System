@@ -324,7 +324,7 @@ const Library = () => {
         {filteredUrls.map((saved, index) => {
           const bookmarkStyle = {
             backgroundColor:
-              selectionMode && selectedBookmarks.includes(saved.id) ? "lightblue" : "white",
+              selectionMode && selectedBookmarks.includes(saved.id) ? "#c8fff7" : "white",
             cursor: selectionMode ? "pointer" : "default",
             width: "40%",
           };

@@ -13,12 +13,17 @@ import MainHome from '../main_pages/mainhome/mainhome.jsx';
 import MainGroup from '../main_pages/maingroup/maingroup.jsx';
 import GroupSettings from '../main_pages/group/grpsettings.jsx';
 import ReaderView from '../components/ReaderView.jsx';
+import './AppRouter.css';
 
 const AppRouter = () => {
   const { user, loading } = useAuth(); // Use authentication context
 
   if (loading) {
-    return <div className="text-center mt-10">Loading...</div>;
+    return (
+      <div className="loader-container">
+        <div className="loadsly"></div>
+      </div>
+    );
   }
 
   return (

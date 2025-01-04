@@ -1,0 +1,35 @@
+/* Container to center the loader */
+.loader-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;  /* Full viewport height */
+    width: 100vw;   /* Full viewport width */
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: rgb(255, 255, 255);  /* Optional: add background overlay */
+  }
+  
+  /* Loader styles */
+  .loadsly {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #c8fff7;
+    border-bottom-color: #0B5ED7;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+  }
+  
+  /* Rotation animation */
+  @keyframes rotation {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  

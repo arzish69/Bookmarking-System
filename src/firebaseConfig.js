@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // Import setPersistence and browserLocalPersistence
+import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged } from "firebase/auth"; // Import necessary Firebase methods
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,5 +14,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// Set Firebase Auth persistence to LOCAL (persist across browser sessions)
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("Firebase Auth persistence set to LOCAL.");
+  })
+  .catch((error) => {
+    console.error("Error setting Firebase Auth persistence: ", error);
+  });
 
 export { db, auth };
