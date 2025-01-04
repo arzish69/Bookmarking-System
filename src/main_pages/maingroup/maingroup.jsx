@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, getDoc, updateDoc, doc, arrayRemove } from "firebase/firestore";
+import { collection, addDoc, getDoc, updateDoc, doc, arrayRemove, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -55,6 +55,7 @@ const MainGroup = () => {
         description: newGroupDescription,
         members: [currentUser.uid], // Add the creator as a member
         createdBy: currentUser.uid,
+        createdAt: serverTimestamp(), // Add server-generated timestamp
       });
 
       // Update the user's group list

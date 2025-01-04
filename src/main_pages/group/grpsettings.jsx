@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom"; // Import Link from react-router-dom
+import { useParams, Link } from "react-router-dom";
 import { doc, getDoc, updateDoc, arrayRemove } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
 import { ListGroup, Button, Spinner, Modal } from "react-bootstrap";
@@ -10,6 +10,7 @@ import MainNavbar from "../main_navbar";
 const GroupSettings = () => {
   const { groupId } = useParams();
   const [groupData, setGroupData] = useState(null);
+  const [createdAt, setCreatedAt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [usernames, setUsernames] = useState({});
@@ -18,7 +19,7 @@ const GroupSettings = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isUserLoaded, setIsUserLoaded] = useState(false);
 
-  const [showKickModal, setShowKickModal] = useState(false); // Modal state
+  const [showKickModal, setShowKickModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState({ id: "", username: "" });
 
   const fetchCurrentUserUid = () => {
@@ -41,13 +42,16 @@ const GroupSettings = () => {
     try {
       const groupRef = doc(db, "groups", groupId);
       const groupSnapshot = await getDoc(groupRef);
-
+  
       if (groupSnapshot.exists()) {
         const groupData = groupSnapshot.data();
         setGroupData(groupData);
-
         setCreatedBy(groupData.createdBy);
-
+  
+        // Get the createdAt timestamp and format it
+        const createdAt = groupData.createdAt?.toDate ? groupData.createdAt.toDate() : new Date();
+        setCreatedAt(createdAt);
+  
         const usernamesMap = await fetchUsernames(groupData.members);
         setUsernames(usernamesMap);
       } else {
@@ -59,7 +63,7 @@ const GroupSettings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   const fetchUsernames = async (memberIds) => {
     const usernamesMap = {};
@@ -89,14 +93,17 @@ const GroupSettings = () => {
       const groupRef = doc(db, "groups", groupId);
       const userRef = doc(db, "users", memberId);
 
+      // Remove member from group
       await updateDoc(groupRef, {
         members: arrayRemove(memberId),
       });
 
+      // Remove group from user document
       await updateDoc(userRef, {
         groups: arrayRemove(groupId),
       });
 
+      // Update state after removal
       setGroupData((prevData) => ({
         ...prevData,
         members: prevData.members.filter((id) => id !== memberId),
@@ -155,32 +162,36 @@ const GroupSettings = () => {
         ) : (
           <>
             <h4>Group Name: {groupData?.groupName || "Unknown"}</h4>
+            {createdAt && (
+              <p style={{ fontSize: "18px", color: "#6c757d" }}>
+                Created on: {createdAt.toLocaleDateString()} {createdAt.toLocaleTimeString()}
+              </p>
+            )}
 
             <h5 className="mt-4">Members</h5>
             <ListGroup>
-              {groupData && groupData.members.length > 0 ? (
-                groupData.members.map((memberId) => (
-                  <ListGroup.Item key={memberId} className="d-flex justify-content-between align-items-center">
-                    {/* Wrap the username with a Link to the user profile page */}
-                    <div>
-                      <Link to={`/user/${memberId}`} style={{ textDecoration: "none", color: "inherit" }}>
-                        {usernames[memberId] || "Loading..."}
-                      </Link>
-                      {memberId === createdBy && (
-                        <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />
-                      )}
-                    </div>
-                    {isAdmin && (
-                      <Button variant="danger" size="sm" onClick={() => confirmKickMember(memberId)} disabled={loading}>
-                        KICK
-                      </Button>
+            {groupData && groupData.members.length > 0 ? (
+              groupData.members.map((memberId) => (
+                <ListGroup.Item key={memberId} className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <Link to={`/user/${memberId}`} style={{ textDecoration: "none", color: "inherit" }}>
+                      {usernames[memberId] || "Loading..."}
+                    </Link>
+                    {memberId === createdBy && (
+                      <img src={starIcon} alt="Admin" style={{ width: "15px", marginLeft: "2px", paddingBottom: "5px" }} />
                     )}
-                  </ListGroup.Item>
-                ))
-              ) : (
-                <p>No members found in this group.</p>
-              )}
-            </ListGroup>
+                  </div>
+                  {isAdmin && memberId !== createdBy && (
+                    <Button variant="danger" size="sm" onClick={() => confirmKickMember(memberId)} disabled={loading}>
+                      KICK
+                    </Button>
+                  )}
+                </ListGroup.Item>
+              ))
+            ) : (
+              <p>No members found in this group.</p>
+            )}
+          </ListGroup>
           </>
         )}
       </div>
@@ -191,14 +202,14 @@ const GroupSettings = () => {
           <Modal.Title>Confirm Removal</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p>Are you sure you want to remove <strong>{selectedMember.username}</strong> from the group?</p>
+          <p>Are you sure you want to remove <strong>{selectedMember.username}</strong> from this group?</p>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowKickModal(false)}>
+          <Button variant="secondary" onClick={() => setShowKickModal(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={handleRemoveMember}>
-            Remove
+          <Button variant="danger" onClick={handleRemoveMember} disabled={loading}>
+            {loading ? <Spinner animation="border" size="sm" /> : "Remove"}
           </Button>
         </Modal.Footer>
       </Modal>
