@@ -1,29 +1,25 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes.authState) {
+    const newAuthState = changes.authState.newValue;
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-  if (message.type === "SAVE_BOOKMARK") {
-    const { url, title } = message.data;
-    try {
-      await addDoc(collection(db, "bookmarks"), { url, title, timestamp: new Date() });
-      sendResponse({ success: true });
-    } catch (error) {
-      console.error("Error saving bookmark:", error);
-      sendResponse({ success: false, error: error.message });
+    // Dynamically set the popup based on auth state
+    if (newAuthState && newAuthState.user) {
+      console.log("User is logged in:", newAuthState.user);
+      chrome.action.setPopup({ popup: "loggedin.html" });
+    } else {
+      console.log("User is logged out");
+      chrome.action.setPopup({ popup: "login.html" });
     }
+  }
+});
+
+// Set the initial popup state on extension load
+chrome.storage.local.get("authState", (result) => {
+  const authState = result.authState;
+
+  if (authState && authState.user) {
+    chrome.action.setPopup({ popup: "loggedin.html" });
+  } else {
+    chrome.action.setPopup({ popup: "login.html" });
   }
 });

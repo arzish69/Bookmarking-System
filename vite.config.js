@@ -7,8 +7,11 @@ export default defineConfig({
     rollupOptions: {
       input: {
         background: resolve(__dirname, 'src/background.js'), // Background script
-        content: resolve(__dirname, 'src/content.js'),        // Popup HTML as entry point
-        popup: resolve(__dirname, 'src/popup.js'),
+        content: resolve(__dirname, 'src/content.js'),
+        popuploggedin: resolve(__dirname, 'src/popuploggedin.js'),
+        popuplogin: resolve(__dirname, 'src/popuplogin.js'),
+        authstate: resolve(__dirname, 'src/authstate.js'),
+        firebaseConfig: resolve(__dirname, 'src/firebaseConfig.js'),
         popu: resolve(__dirname, 'src/popu.css'),      // Popup CSS
         conten: resolve(__dirname, 'src/conten.css'),   // Content CSS
       },

@@ -1,20 +1,21 @@
 {
   "manifest_version": 3,
   "name": "Bookmarking System Extension",
-  "version": "3.1",
+  "version": "3.4",
   "description": "Save bookmarks, annotate web pages, and create sticky notes directly while browsing.",
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
-    "tabs"
+    "tabs",
+    "identity"
   ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "loggedin.html",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",
@@ -30,7 +31,8 @@
   ],
   "host_permissions": [
     "https://*.firebaseapp.com/*",
-    "https://*.googleapis.com/*"
+    "https://*.googleapis.com/*",
+    "http://localhost/*"
   ],
   "icons": {
     "16": "icon16.png",
