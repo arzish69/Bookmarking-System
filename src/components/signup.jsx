@@ -4,6 +4,8 @@ import { auth, db } from "../firebaseConfig"; // Import Firebase auth and Firest
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore"; // Firestore methods
 import "./signup.css"; // Import the CSS file for animations
+import axios from 'axios';
+//import useAuthSync from './useAuthState'; // Import the custom hook
 
 const SignUp = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,39 +23,62 @@ const SignUp = () => {
     setError({ type: "", message: "" }); // Reset errors when toggling
   };
 
+  // Function to sync auth state with the backend
+  const syncLoginWithBackend = async (user, state) => {
+    try {
+      const response = await axios.post('http://localhost:3000/sync-auth-state', {
+        user: {
+          uid: user.uid,
+          email: user.email,
+        },
+        state: state
+      });
+
+      console.log('Auth state synced:', response.data);
+    } catch (error) {
+      console.error('Failed to sync auth state with backend:', error);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError({ type: "", message: "" }); // Reset errors before submission
-
+  
     try {
       if (isLogin) {
         // Handle login
-        await signInWithEmailAndPassword(auth, email, password);
-        navigate("/library"); // Navigate to /mainhome upon success
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+  
+        await syncLoginWithBackend(user, "loggedIn");
+  
+        navigate("/library"); // Navigate to /library upon success
       } else {
         // Handle signup
         if (password !== repeatPassword) {
           setError({ type: "passwordMismatch", message: "Passwords do not match" });
           return;
         }
-
+  
         // Create user with Firebase Authentication
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
+  
         // Save user data (name, username) in Firestore under `/users/{userId}`
         await setDoc(doc(db, "users", user.uid), {
           name: name,
           username: username,
           email: email,
         });
-
-        navigate("/mainhome");
+  
+        await syncLoginWithBackend(user, "loggedIn");
+  
+        navigate("/library");
       }
     } catch (error) {
       setShake(true); // Trigger the shake animation
       setError({ type: "password", message: "Invalid Credentials" });
-
+  
       // Remove the shake animation after a brief period
       setTimeout(() => setShake(false), 500);
     }

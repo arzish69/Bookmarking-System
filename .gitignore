@@ -13,6 +13,10 @@ dist
 dist-ssr
 *.local
 .env
+# Ignore all .env and .json files in backend
+backend/.env
+backend/firebase-service-account.json
+backend/node_modules
 
 # Editor directories and files
 .vscode/*
