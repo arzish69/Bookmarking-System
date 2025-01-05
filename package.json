@@ -6,13 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "server": "node server.js",
+    "server": "node backend/server.js",
     "start": "concurrently \"npm run server\" \"vite\"",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.7.7",
+    "axios": "^1.7.9",
     "bootstrap": "^5.3.3",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",

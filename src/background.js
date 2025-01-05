@@ -1,25 +1,45 @@
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "local" && changes.authState) {
-    const newAuthState = changes.authState.newValue;
+let ws = new WebSocket("ws://localhost:3000");
 
-    // Dynamically set the popup based on auth state
-    if (newAuthState && newAuthState.user) {
-      console.log("User is logged in:", newAuthState.user);
-      chrome.action.setPopup({ popup: "loggedin.html" });
+ws.onmessage = (event) => {
+  try {
+    const data = JSON.parse(event.data);
+
+    if (data.state === "loggedOut") {
+      console.log("User logged out");
+      chrome.storage.local.set({ authState: { user: null, state: "loggedOut" } }, () => {
+        console.log("Auth state cleared in Chrome storage.");
+        chrome.action.setPopup({ popup: "login.html" });
+      });
+    } else if (data.state === "loggedIn") {
+      console.log("User logged in:", data.user);
+      chrome.storage.local.set({ authState: data }, () => {
+        console.log("Auth state updated in Chrome storage.");
+        chrome.action.setPopup({ popup: "loggedin.html" });
+      });
     } else {
-      console.log("User is logged out");
-      chrome.action.setPopup({ popup: "login.html" });
+      console.warn("Unexpected data state:", data);
     }
+  } catch (error) {
+    console.error("Error parsing WebSocket message:", error);
   }
-});
+};
 
-// Set the initial popup state on extension load
-chrome.storage.local.get("authState", (result) => {
-  const authState = result.authState;
+ws.onerror = (error) => {
+  console.error("WebSocket error:", error);
+};
 
-  if (authState && authState.user) {
-    chrome.action.setPopup({ popup: "loggedin.html" });
+let retryCount = 0;
+const maxRetries = 10;
+
+ws.onclose = () => {
+  console.log("WebSocket connection closed. Retrying in 5 seconds...");
+  if (retryCount < maxRetries) {
+    retryCount++;
+    setTimeout(() => {
+      console.log("Attempting to reconnect...");
+      ws = new WebSocket("ws://localhost:3000");
+    }, 5000); // Retry every 5 seconds
   } else {
-    chrome.action.setPopup({ popup: "login.html" });
+    console.error("Maximum retry attempts reached. Stopping reconnection attempts.");
   }
-});
+};
