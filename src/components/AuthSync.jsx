@@ -1,8 +1,8 @@
-// React Webapp Component
+// AuthSync.jsx
 import { useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
-const EXTENSION_ID = 'egobkfhpphmiakoggbiofoclldkiellf'; // Get this from Chrome extension page
+const EXTENSION_ID = 'egobkfhpphmiakoggbiofoclldkiellf';
 
 function AuthSync() {
   useEffect(() => {
@@ -18,34 +18,38 @@ function AuthSync() {
       
       // Notify extension
       window.postMessage({
-        type: 'WEBAPP_AUTH_STATE',
+        source: 'webapp',
+        type: 'AUTH_STATE_CHANGED',
         payload: authState
       }, '*');
+      
+      // Also try direct message to extension
+      try {
+        chrome.runtime.sendMessage(EXTENSION_ID, {
+          type: 'AUTH_STATE_CHANGED',
+          payload: authState
+        }).catch(() => {}); // Ignore any errors
+      } catch (error) {
+        // Extension might not be available, ignore
+      }
     });
     
     // Listen for auth state changes from extension
-    window.addEventListener('message', (event) => {
+    const extensionListener = (event) => {
       if (event.data.type === 'EXTENSION_AUTH_STATE') {
-        // Update your webapp state here
-        // You might want to use Redux, Context, or other state management
         console.log('Auth state from extension:', event.data.payload);
       }
-    });
+    };
     
-    // Get initial auth state from extension
-    chrome.runtime.sendMessage(EXTENSION_ID, { type: 'GET_AUTH_STATE' }, 
-      (response) => {
-        if (response) {
-          console.log('Initial auth state:', response);
-          // Update your webapp state here
-        }
-      }
-    );
+    window.addEventListener('message', extensionListener);
     
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      window.removeEventListener('message', extensionListener);
+    };
   }, []);
   
-  return null; // This is a non-visual component
+  return null;
 }
 
 export default AuthSync;

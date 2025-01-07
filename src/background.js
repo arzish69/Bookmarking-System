@@ -16,27 +16,43 @@ const auth = initializeAuth(app, {
   persistence: indexedDBLocalPersistence
 });
 
-// background.js
 // Track connections
-const connections = {};
+const connections = new Set();
 
 // Handle connection establishment
 chrome.runtime.onConnect.addListener((port) => {
-  const portId = port.name;
-  connections[portId] = port;
+  connections.add(port);
   
   port.onDisconnect.addListener(() => {
-    delete connections[portId];
+    connections.delete(port);
   });
 });
 
 // Broadcast auth state to all connections
 const broadcastAuthState = (authState) => {
   chrome.storage.local.set({ authState }, () => {
-    chrome.runtime.sendMessage({
-      type: 'AUTH_STATE_CHANGED',
-      payload: authState
+    // Safely send message to all active connections
+    connections.forEach(port => {
+      try {
+        port.postMessage({
+          type: 'AUTH_STATE_CHANGED',
+          payload: authState
+        });
+      } catch (error) {
+        console.log('Error sending message to port:', error);
+        connections.delete(port);
+      }
     });
+    
+    // Also try runtime message for popup
+    try {
+      chrome.runtime.sendMessage({
+        type: 'AUTH_STATE_CHANGED',
+        payload: authState
+      }).catch(() => {}); // Ignore errors here
+    } catch (error) {
+      console.log('Error broadcasting message:', error);
+    }
   });
 };
 
@@ -45,5 +61,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'AUTH_STATE_CHANGED') {
     broadcastAuthState(message.payload);
   }
-  return true;
+  if (message.type === 'GET_AUTH_STATE') {
+    chrome.storage.local.get('authState', (data) => {
+      try {
+        sendResponse(data.authState);
+      } catch (error) {
+        console.log('Error sending response:', error);
+      }
+    });
+    return true;
+  }
 });
