@@ -10,7 +10,7 @@ export default defineConfig({
         content: resolve(__dirname, 'src/content.js'),
         popuploggedin: resolve(__dirname, 'src/popuploggedin.js'),
         popuplogin: resolve(__dirname, 'src/popuplogin.js'),
-        authstate: resolve(__dirname, 'src/authstate.js'),
+        popup: resolve(__dirname, 'src/popup.js'),
         firebaseConfig: resolve(__dirname, 'src/firebaseConfig.js'),
         popu: resolve(__dirname, 'src/popu.css'),      // Popup CSS
         conten: resolve(__dirname, 'src/conten.css'),   // Content CSS

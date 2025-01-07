@@ -1,45 +1,49 @@
-let ws = new WebSocket("ws://localhost:3000");
+// background.js
+import { initializeApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, initializeAuth, indexedDBLocalPersistence, signOut } from 'firebase/auth';
 
-ws.onmessage = (event) => {
-  try {
-    const data = JSON.parse(event.data);
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
 
-    if (data.state === "loggedOut") {
-      console.log("User logged out");
-      chrome.storage.local.set({ authState: { user: null, state: "loggedOut" } }, () => {
-        console.log("Auth state cleared in Chrome storage.");
-        chrome.action.setPopup({ popup: "login.html" });
-      });
-    } else if (data.state === "loggedIn") {
-      console.log("User logged in:", data.user);
-      chrome.storage.local.set({ authState: data }, () => {
-        console.log("Auth state updated in Chrome storage.");
-        chrome.action.setPopup({ popup: "loggedin.html" });
-      });
-    } else {
-      console.warn("Unexpected data state:", data);
-    }
-  } catch (error) {
-    console.error("Error parsing WebSocket message:", error);
+const app = initializeApp(firebaseConfig);
+const auth = initializeAuth(app, {
+  persistence: indexedDBLocalPersistence
+});
+
+// background.js
+// Track connections
+const connections = {};
+
+// Handle connection establishment
+chrome.runtime.onConnect.addListener((port) => {
+  const portId = port.name;
+  connections[portId] = port;
+  
+  port.onDisconnect.addListener(() => {
+    delete connections[portId];
+  });
+});
+
+// Broadcast auth state to all connections
+const broadcastAuthState = (authState) => {
+  chrome.storage.local.set({ authState }, () => {
+    chrome.runtime.sendMessage({
+      type: 'AUTH_STATE_CHANGED',
+      payload: authState
+    });
+  });
+};
+
+// Listen for messages
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'AUTH_STATE_CHANGED') {
+    broadcastAuthState(message.payload);
   }
-};
-
-ws.onerror = (error) => {
-  console.error("WebSocket error:", error);
-};
-
-let retryCount = 0;
-const maxRetries = 10;
-
-ws.onclose = () => {
-  console.log("WebSocket connection closed. Retrying in 5 seconds...");
-  if (retryCount < maxRetries) {
-    retryCount++;
-    setTimeout(() => {
-      console.log("Attempting to reconnect...");
-      ws = new WebSocket("ws://localhost:3000");
-    }, 5000); // Retry every 5 seconds
-  } else {
-    console.error("Maximum retry attempts reached. Stopping reconnection attempts.");
-  }
-};
+  return true;
+});
