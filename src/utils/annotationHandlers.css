@@ -1,0 +1,10 @@
+.highlighted {
+    user-select: text; /* Allow clicking and copying text */
+    cursor: move; /* Indicate interactivity */
+    position: relative;
+  }
+  
+  .highlighted:active {
+    cursor: pointer; /* Maintain pointer during click */
+  }
+  

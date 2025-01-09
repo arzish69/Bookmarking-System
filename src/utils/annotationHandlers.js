@@ -1,5 +1,6 @@
 import { db } from '../firebaseConfig';
 import { collection, addDoc, updateDoc, getDocs, query, where, deleteDoc } from 'firebase/firestore';
+import './annotationHandlers.css';
 
 export const saveAnnotation = async (userId, urlId, annotation) => {
   try {
@@ -15,7 +16,7 @@ export const saveAnnotation = async (userId, urlId, annotation) => {
     const existingDocs = await getDocs(existingQuery);
     
     if (!existingDocs.empty) {
-      // Update existing annotation
+      // Update existing annotation with new color
       const existingDoc = existingDocs.docs[0];
       await updateDoc(existingDoc.ref, {
         ...annotation,
@@ -68,27 +69,23 @@ export const getTextOffsets = (element, selection) => {
 
 // Helper function to apply annotations to content
 export const applyAnnotationsToContent = (content, annotations) => {
-  // Sort annotations by start offset in reverse order
   const sortedAnnotations = [...annotations].sort((a, b) => b.startOffset - a.startOffset);
-  
+
   let annotatedContent = content;
-  sortedAnnotations.forEach(annotation => {
+  sortedAnnotations.forEach((annotation) => {
     const before = annotatedContent.slice(0, annotation.startOffset);
     const highlighted = annotatedContent.slice(annotation.startOffset, annotation.endOffset);
     const after = annotatedContent.slice(annotation.endOffset);
-    
+
     const highlightSpan = `<span 
       class="highlighted" 
-      style="background-color: ${annotation.color}"
-      data-annotation-id="${annotation.id}"
-    >${highlighted}${
-      annotation.note 
-        ? `<span class="sticky-note" title="${annotation.note}">📝</span>` 
-        : ''
-    }</span>`;
-    
+      style="background-color: ${annotation.color}" 
+      data-annotation-id="${annotation.id}" 
+      data-text="${highlighted}" 
+    >${highlighted}</span>`;
+
     annotatedContent = before + highlightSpan + after;
   });
-  
+
   return annotatedContent;
 };

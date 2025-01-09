@@ -27,6 +27,7 @@ const ReaderView = () => {
   const [user, setUser] = useState(null);
   const [title, setTitle] = useState("");
   const [annotations, setAnnotations] = useState([]);
+  const [currentAnnotation, setCurrentAnnotation] = useState(null);
   
   // Popup state
   const [popupVisible, setPopupVisible] = useState(false);
@@ -107,6 +108,33 @@ const ReaderView = () => {
     fetchContentAndAnnotations();
   }, [user, urlId]);
 
+  useEffect(() => {
+    const handleAnnotationClick = (event) => {
+      if (event.target.classList.contains("highlighted")) {
+        const annotationId = event.target.dataset.annotationId;
+        const text = event.target.dataset.text;
+        
+        // Find the current annotation
+        const annotation = annotations.find(a => a.id === annotationId);
+        if (annotation) {
+          setCurrentAnnotation(annotation);
+        }
+  
+        // Set popup state
+        const rect = event.target.getBoundingClientRect();
+        setPopupPosition({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+        });
+        setSelectedText(text);
+        setPopupVisible(true);
+      }
+    };
+  
+    document.addEventListener("click", handleAnnotationClick);
+    return () => document.removeEventListener("click", handleAnnotationClick);
+  }, [annotations]);  
+
   // Text selection handler
   const handleTextSelection = (e) => {
     const selection = window.getSelection();
@@ -132,8 +160,19 @@ const ReaderView = () => {
     try {
       if (!contentRef.current) return;
       
-      const selection = window.getSelection();
-      const offsets = getTextOffsets(contentRef.current, selection);
+      let offsets;
+      
+      // If we're updating an existing annotation, use its offsets
+      if (currentAnnotation) {
+        offsets = {
+          start: currentAnnotation.startOffset,
+          end: currentAnnotation.endOffset
+        };
+      } else {
+        // For new annotations, get offsets from selection
+        const selection = window.getSelection();
+        offsets = getTextOffsets(contentRef.current, selection);
+      }
       
       const annotation = {
         text,
@@ -143,11 +182,21 @@ const ReaderView = () => {
       };
       
       const annotationId = await saveAnnotation(user.uid, urlId, annotation);
-      setAnnotations(prev => [...prev, { ...annotation, id: annotationId }]);
+      
+      if (currentAnnotation) {
+        // Update existing annotation in state
+        setAnnotations(prev => prev.map(a => 
+          a.id === currentAnnotation.id ? { ...annotation, id: annotationId } : a
+        ));
+      } else {
+        // Add new annotation to state
+        setAnnotations(prev => [...prev, { ...annotation, id: annotationId }]);
+      }
+      
+      setCurrentAnnotation(null);
       setPopupVisible(false);
     } catch (error) {
       console.error('Error saving highlight:', error);
-      // Consider adding user feedback for error
     }
   };
 
@@ -225,14 +274,28 @@ const ReaderView = () => {
       </div>
 
       {popupVisible && (
-        <TextAnnotationPopup
-          selectedText={selectedText}
-          position={popupPosition}
-          onHighlight={handleHighlight}
-          onStickyNote={handleStickyNote}
-          onCopyText={handleCopyText}
-        />
-      )}
+      <TextAnnotationPopup
+        selectedText={selectedText}
+        position={popupPosition}
+        currentColor="rgba(255, 255, 0, 0.62)" // Default color or dynamic based on annotation
+        onHighlight={(text, color) => {
+          handleHighlight(text, color); // Call the highlight handler to update annotations
+        }}
+        onStickyNote={(text, note) => {
+          // Add sticky note logic here
+          const updatedAnnotations = annotations.map((annotation) =>
+            annotation.text === text
+              ? { ...annotation, note } // Update or add note
+              : annotation
+          );
+          setAnnotations(updatedAnnotations);
+        }}
+        onCopyText={(text) => {
+          navigator.clipboard.writeText(text); // Copy text to clipboard
+          alert("Text copied!");
+        }}
+      />
+    )}
     </div>
   );
 };
