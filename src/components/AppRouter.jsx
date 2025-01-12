@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
+import Recommendation from './interest.jsx';
 
 import Home from '../components/home.jsx';
 import Downloads from '../components/downloads.jsx';
@@ -65,6 +66,10 @@ const AppRouter = () => {
         <Route
           path="/read/:urlId"
           element={user ? <ReaderView /> : <Navigate to="/signup" />}
+        />
+        <Route
+          path="/interests"
+          element={user ? <Recommendation /> : <Navigate to="/signup" />}
         />
 
         {/* Public Routes */}

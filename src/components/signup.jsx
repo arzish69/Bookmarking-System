@@ -42,44 +42,39 @@ const SignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError({ type: "", message: "" }); // Reset errors before submission
+    setError({ type: "", message: "" });
   
     try {
       if (isLogin) {
-        // Handle login
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-  
         await syncLoginWithBackend(user, "loggedIn");
-  
-        navigate("/library"); // Navigate to /library upon success
+        navigate("/library");
       } else {
-        // Handle signup
         if (password !== repeatPassword) {
           setError({ type: "passwordMismatch", message: "Passwords do not match" });
           return;
         }
   
-        // Create user with Firebase Authentication
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
   
-        // Save user data (name, username) in Firestore under `/users/{userId}`
+        // Create user document with firstLogin flag
         await setDoc(doc(db, "users", user.uid), {
           name: name,
           username: username,
           email: email,
+          firstLogin: true, // Add this flag
+          interests: [], // Initialize empty interests array
+          createdAt: new Date().toISOString()
         });
   
         await syncLoginWithBackend(user, "loggedIn");
-  
-        navigate("/library");
+        navigate("/interests"); // Redirect to interests page instead of library
       }
     } catch (error) {
-      setShake(true); // Trigger the shake animation
+      setShake(true);
       setError({ type: "password", message: "Invalid Credentials" });
-  
-      // Remove the shake animation after a brief period
       setTimeout(() => setShake(false), 500);
     }
   };
