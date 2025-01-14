@@ -28,6 +28,8 @@ const ReaderView = () => {
   const [title, setTitle] = useState("");
   const [annotations, setAnnotations] = useState([]);
   const [currentAnnotation, setCurrentAnnotation] = useState(null);
+  const [noteContent, setNoteContent] = useState('');
+  const [showNotePopup, setShowNotePopup] = useState(false);
   
   // Popup state
   const [popupVisible, setPopupVisible] = useState(false);
@@ -109,7 +111,7 @@ const ReaderView = () => {
   }, [user, urlId]);
 
   useEffect(() => {
-    const handleAnnotationClick = (event) => {
+    const handleClick = (event) => {
       if (event.target.classList.contains("highlighted")) {
         const annotationId = event.target.dataset.annotationId;
         const text = event.target.dataset.text;
@@ -128,11 +130,25 @@ const ReaderView = () => {
         });
         setSelectedText(text);
         setPopupVisible(true);
+      } else if (event.target.classList.contains("note-icon")) {
+        const annotationId = event.target.dataset.annotationId;
+        const note = event.target.dataset.note;
+        
+        // Show note content
+        setNoteContent(note);
+        setShowNotePopup(true);
+        
+        // Position the popup near the icon
+        const rect = event.target.getBoundingClientRect();
+        setPopupPosition({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+        });
       }
     };
   
-    document.addEventListener("click", handleAnnotationClick);
-    return () => document.removeEventListener("click", handleAnnotationClick);
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
   }, [annotations]);  
 
   // Text selection handler
@@ -204,22 +220,47 @@ const ReaderView = () => {
     try {
       if (!contentRef.current) return;
       
-      const selection = window.getSelection();
-      const offsets = getTextOffsets(contentRef.current, selection);
+      let offsets;
+      let color;
+      
+      // If we're updating an existing annotation, use its offsets and keep its color
+      if (currentAnnotation) {
+        offsets = {
+          start: currentAnnotation.startOffset,
+          end: currentAnnotation.endOffset
+        };
+        color = currentAnnotation.color; // Keep the existing color
+      } else {
+        // For new annotations, get offsets from selection and use default color
+        const selection = window.getSelection();
+        offsets = getTextOffsets(contentRef.current, selection);
+        color = "rgba(255, 255, 0, 0.62)"; // Default highlight color for new annotations
+      }
       
       const annotation = {
         text,
         note: noteText,
         startOffset: offsets.start,
-        endOffset: offsets.end
+        endOffset: offsets.end,
+        color, // Use the determined color
       };
       
       const annotationId = await saveAnnotation(user.uid, urlId, annotation);
-      setAnnotations(prev => [...prev, { ...annotation, id: annotationId }]);
+      
+      if (currentAnnotation) {
+        // Update existing annotation in state
+        setAnnotations(prev => prev.map(a => 
+          a.id === currentAnnotation.id ? { ...annotation, id: annotationId } : a
+        ));
+      } else {
+        // Add new annotation to state
+        setAnnotations(prev => [...prev, { ...annotation, id: annotationId }]);
+      }
+      
+      setCurrentAnnotation(null);
       setPopupVisible(false);
     } catch (error) {
       console.error('Error saving note:', error);
-      // Consider adding user feedback for error
     }
   };
 
@@ -264,37 +305,45 @@ const ReaderView = () => {
       </div>
 
       <div style={styles.contentBox} onMouseUp={handleTextSelection}>
-        {loading ? (
-          <Spinner animation="border" />
-        ) : error ? (
-          <div style={styles.error}>{error}</div>
-        ) : (
-          renderContent()
-        )}
-      </div>
+      {loading ? (
+        <Spinner animation="border" />
+      ) : error ? (
+        <div style={styles.error}>{error}</div>
+      ) : (
+        renderContent()
+      )}
+    </div>
 
-      {popupVisible && (
+    {popupVisible && (
       <TextAnnotationPopup
         selectedText={selectedText}
         position={popupPosition}
-        currentColor="rgba(255, 255, 0, 0.62)" // Default color or dynamic based on annotation
-        onHighlight={(text, color) => {
-          handleHighlight(text, color); // Call the highlight handler to update annotations
-        }}
-        onStickyNote={(text, note) => {
-          // Add sticky note logic here
-          const updatedAnnotations = annotations.map((annotation) =>
-            annotation.text === text
-              ? { ...annotation, note } // Update or add note
-              : annotation
-          );
-          setAnnotations(updatedAnnotations);
-        }}
-        onCopyText={(text) => {
-          navigator.clipboard.writeText(text); // Copy text to clipboard
-          alert("Text copied!");
-        }}
+        currentColor="rgba(255, 255, 0, 0.62)"
+        onHighlight={handleHighlight}
+        onStickyNote={handleStickyNote}
+        onCopyText={handleCopyText}
       />
+    )}
+
+    {/* Add the note popup here, just before the closing div */}
+    {showNotePopup && (
+      <div 
+        style={{
+          ...styles.notePopup,
+          top: popupPosition.top,
+          left: popupPosition.left
+        }}
+      >
+        <div style={styles.noteContent}>
+          {noteContent}
+        </div>
+        <button 
+          style={styles.closeButton}
+          onClick={() => setShowNotePopup(false)}
+        >
+          Close
+        </button>
+      </div>
     )}
     </div>
   );
@@ -369,6 +418,31 @@ const styles = {
     border: "none",
     borderRadius: "4px",
     cursor: "pointer",
+  },
+  notePopup: {
+    position: 'absolute',
+    backgroundColor: 'white',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    padding: '10px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+    zIndex: 1000,
+    maxWidth: '300px',
+    maxHeight: '200px',
+    overflow: 'auto'
+  },
+  noteContent: {
+    marginBottom: '10px',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word'
+  },
+  closeButton: {
+    padding: '4px 8px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer'
   },
   error: {
     color: "red",

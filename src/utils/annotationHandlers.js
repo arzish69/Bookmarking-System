@@ -77,12 +77,41 @@ export const applyAnnotationsToContent = (content, annotations) => {
     const highlighted = annotatedContent.slice(annotation.startOffset, annotation.endOffset);
     const after = annotatedContent.slice(annotation.endOffset);
 
+    // Escape HTML characters to prevent text distortion
+    const escapedText = highlighted
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    // Add note icon if annotation has a note
+    // Using SVG with dynamic color matching the highlight
+    const noteIcon = annotation.note ? 
+      `<svg 
+        class="note-icon" 
+        data-annotation-id="${annotation.id}" 
+        data-note="${annotation.note}"
+        width="14" 
+        height="14" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        stroke-width="2" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+      >
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>` : 
+      '';
+
+    // Create span with optional note icon
     const highlightSpan = `<span 
-      class="highlighted" 
+      class="highlighted ${annotation.note ? 'has-note' : ''}" 
       style="background-color: ${annotation.color}" 
       data-annotation-id="${annotation.id}" 
-      data-text="${highlighted}" 
-    >${highlighted}</span>`;
+      data-text="${escapedText}"
+    >${escapedText}${noteIcon}</span>`;
 
     annotatedContent = before + highlightSpan + after;
   });

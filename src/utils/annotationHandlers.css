@@ -8,3 +8,26 @@
     cursor: pointer; /* Maintain pointer during click */
   }
   
+  .note-icon {
+    display: inline-block;
+    margin-left: 4px;
+    cursor: pointer;
+    vertical-align: text-top;
+    position: relative;
+    top: -1px;
+  }
+  
+  .has-note {
+    position: relative;
+    display: inline;
+  }
+  
+  /* Make SVG color match the text color for better contrast */
+  .highlighted .note-icon {
+    color: rgba(0, 0, 0, 0.6);
+  }
+  
+  /* Add hover effect */
+  .note-icon:hover {
+    transform: scale(1.1);
+  }
