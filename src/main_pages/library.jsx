@@ -26,8 +26,51 @@ const Library = () => {
   const [userGroups, setUserGroups] = useState([]); // List of groups the user is part of
   const [selectedGroups, setSelectedGroups] = useState([]); // Selected groups for sharing
   const navigate = useNavigate();
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfName, setPdfName] = useState("");
 
   const sidebarItems = ["All", "Annotate", "AI Summarizer", "Organize"];
+
+  const createLocalPdfUrl = (file) => {
+    return URL.createObjectURL(file);
+  };
+  
+  const handlePdfUpload = async (e) => {
+    e.preventDefault();
+    if (!pdfFile) {
+      setMessage("Please select a PDF file");
+      return;
+    }
+
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const timestamp = new Date();
+      const localPdfUrl = createLocalPdfUrl(pdfFile);
+
+      // Save the PDF metadata to Firestore
+      await addDoc(collection(db, "users", user.uid, "links"), {
+        url: localPdfUrl,
+        title: pdfName || pdfFile.name,
+        type: "pdf",
+        originalFileName: pdfFile.name,
+        timestamp,
+        tags: ["pdf"],
+        isLocalPdf: true // Flag to identify local PDFs
+      });
+
+      setMessage("PDF added successfully");
+      fetchSavedUrls(user);
+      setPdfFile(null);
+      setPdfName("");
+      setShowPdfModal(false);
+    } catch (error) {
+      console.error("Error adding PDF:", error);
+      setMessage("Error adding PDF");
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -225,14 +268,104 @@ const Library = () => {
     item.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredUrls = urls.filter((saved) =>
-    saved.url.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUrls = urls.filter((saved) => {
+    const searchString = searchTerm.toLowerCase();
+    return (
+      saved.url.toLowerCase().includes(searchString) ||
+      (saved.title && saved.title.toLowerCase().includes(searchString)) ||
+      (saved.originalFileName && saved.originalFileName.toLowerCase().includes(searchString))
+    );
+  });
 
-  const navigateToReaderView = (urlId) => {
+  const navigateToReaderView = (saved) => {
     if (!selectionMode) {
-      navigate(`/read/${urlId}`);
+      if (saved.isLocalPdf) {
+        // Open PDF in new tab
+        window.open(saved.url, '_blank');
+      } else {
+        // Regular bookmark navigation
+        navigate(`/read/${saved.id}`);
+      }
     }
+  };
+
+  const renderBookmarkItem = (saved, index) => {
+    const bookmarkStyle = {
+      backgroundColor: selectionMode && selectedBookmarks.includes(saved.id) ? "#c8fff7" : "white",
+      cursor: selectionMode ? "pointer" : "default",
+      width: "40%",
+    };
+
+    return (
+      <li
+        key={index}
+        className="list-group-item d-flex flex-column justify-content-between align-items-start"
+        style={bookmarkStyle}
+        onClick={() => toggleBookmarkSelection(saved.id)}
+      >
+        <div className="d-flex w-100 justify-content-between">
+          <div>
+            <span
+              style={{
+                cursor: selectionMode ? "default" : "pointer",
+                color: "blue",
+                display: "flex",
+                alignItems: "center",
+              }}
+              onClick={() => !selectionMode && navigateToReaderView(saved)}
+            >
+              {saved.isLocalPdf && (
+                <span 
+                  style={{
+                    backgroundColor: "#ff4444",
+                    color: "white",
+                    padding: "2px 6px",
+                    borderRadius: "3px",
+                    marginRight: "8px",
+                    fontSize: "12px"
+                  }}
+                >
+                  PDF
+                </span>
+              )}
+              {saved.title || saved.originalFileName || saved.url}
+            </span>
+          </div>
+          <span className="text-muted ml-2">
+            {new Date(saved.timestamp?.seconds * 1000).toLocaleString()}
+          </span>
+        </div>
+        {/* Tags Display */}
+        <div style={{ fontSize: "12px", color: "gray", marginTop: "5px" }}>
+          {saved.tags?.map((tag, idx) => (
+            <span
+              key={idx}
+              style={{
+                display: "inline-block",
+                backgroundColor: "#f0f0f0",
+                borderRadius: "3px",
+                padding: "2px 6px",
+                marginRight: "5px",
+                marginBottom: "5px",
+              }}
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+        {!selectionMode && (
+          <div style={{ marginTop: "10px", alignSelf: "flex-end" }}>
+            <img
+              src={dustbinIcon}
+              alt="Delete"
+              style={{ width: "20px", cursor: "pointer" }}
+              onClick={() => handleDelete(saved.url)}
+              disabled={processingUrl === saved.url}
+            />
+          </div>
+        )}
+      </li>
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -277,6 +410,43 @@ const Library = () => {
     setShowModal(false); // Close the modal
   };
 
+  const pdfUploadModal = (
+    <Modal show={showPdfModal} onHide={() => setShowPdfModal(false)} centered>
+      <Modal.Header closeButton>
+        <Modal.Title>Add PDF Bookmark</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <form onSubmit={handlePdfUpload}>
+          <div className="form-group">
+            <label htmlFor="pdfName">Title (optional):</label>
+            <input
+              type="text"
+              className="form-control"
+              id="pdfName"
+              value={pdfName}
+              onChange={(e) => setPdfName(e.target.value)}
+              placeholder="Enter a title for the PDF"
+            />
+          </div>
+          <div className="form-group mt-3">
+            <label htmlFor="pdfFile">PDF File:</label>
+            <input
+              type="file"
+              className="form-control"
+              id="pdfFile"
+              accept=".pdf"
+              onChange={(e) => setPdfFile(e.target.files[0])}
+              required
+            />
+          </div>
+          <Button type="submit" className="btn btn-primary mt-3">
+            Add PDF
+          </Button>
+        </form>
+      </Modal.Body>
+    </Modal>
+  );
+
   return (
     <>
       <MainNavbar />
@@ -306,17 +476,24 @@ const Library = () => {
 
       <div className="container" style={{ marginLeft: "270px", marginTop: "80px" }}>
         <div style={{ display: "flex", justifyContent: "flex-end", paddingRight: "380px" }}>
-          <Button
-            variant="primary"
-            onClick={() => setShowModal(true)}
-            style={{ marginRight: "10px" }}
-          >
-            Add a Bookmark
-          </Button>
-          <Button variant="primary" onClick={handleToggleSelectionMode}>
-            {selectionMode ? "Exit Selection" : "Select"}
-          </Button>
-        </div>
+        <Button
+          variant="primary"
+          onClick={() => setShowModal(true)}
+          style={{ marginRight: "10px" }}
+        >
+          Add a Bookmark
+        </Button>
+        <Button
+          variant="primary"
+          onClick={() => setShowPdfModal(true)}
+          style={{ marginRight: "10px" }}
+        >
+          Add PDF
+        </Button>
+        <Button variant="primary" onClick={handleToggleSelectionMode}>
+          {selectionMode ? "Exit Selection" : "Select"}
+        </Button>
+      </div>
         <div className="d-flex justify-content-between align-items-center">
           <h1>Saved Bookmarks</h1>
         </div>
@@ -430,6 +607,41 @@ const Library = () => {
               Save Webpage
             </Button>
           </form>
+        </Modal.Body>
+      </Modal>
+
+      <Modal show={showPdfModal} onHide={() => setShowPdfModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Add PDF Bookmark</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={handlePdfUpload}>
+            <div className="form-group">
+              <label htmlFor="pdfName">Title (optional):</label>
+              <input
+                type="text"
+                className="form-control"
+                id="pdfName"
+                value={pdfName}
+                onChange={(e) => setPdfName(e.target.value)}
+                placeholder="Enter a title for the PDF"
+              />
+            </div>
+            <div className="form-group mt-3">
+              <label htmlFor="pdfFile">PDF File:</label>
+              <input
+                type="file"
+                className="form-control"
+                id="pdfFile"
+                accept=".pdf"
+                onChange={(e) => setPdfFile(e.target.files[0])}
+                required
+              />
+            </div>
+            <Button type="submit" className="btn btn-primary mt-3">
+              Add PDF
+            </Button>
+            </form>
         </Modal.Body>
       </Modal>
 
