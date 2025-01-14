@@ -1,7 +1,10 @@
+// OTPVerification.jsx - Updated component
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from "../firebaseConfig";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 const OTPVerification = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -10,8 +13,8 @@ const OTPVerification = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userId = localStorage.getItem('pendingUserId');
-    if (!userId) {
+    const pendingRegistration = localStorage.getItem('pendingRegistration');
+    if (!pendingRegistration) {
       navigate('/signup');
     }
   }, [navigate]);
@@ -38,45 +41,50 @@ const OTPVerification = () => {
     setError('');
 
     try {
-      const userId = localStorage.getItem('pendingUserId');
-      const userRef = doc(db, "users", userId);
-      const userDoc = await getDoc(userRef);
-      
-      if (!userDoc.exists()) {
-        throw new Error('User not found');
+      const registrationData = JSON.parse(localStorage.getItem('pendingRegistration'));
+      if (!registrationData) {
+        throw new Error('Registration data not found');
       }
 
-      const userData = userDoc.data();
-      
       // Check if OTP has expired
-      if (new Date() > new Date(userData.otpExpiry)) {
-        setError('OTP has expired. Please request a new one.');
+      if (new Date() > new Date(registrationData.otpExpiry)) {
+        setError('OTP has expired. Please try again.');
         return;
       }
 
       // Verify OTP
       const enteredOTP = otp.join('');
-      if (enteredOTP !== userData.verificationOTP) {
+      if (enteredOTP !== registrationData.otp) {
         setError('Invalid OTP. Please try again.');
         return;
       }
 
-      // Update user verification status
-      await updateDoc(userRef, {
-        emailVerified: true,
-        verificationOTP: null,
-        otpExpiry: null
+      // Create auth user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        registrationData.email, 
+        registrationData.password
+      );
+
+      // Create user document in Firestore
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        username: registrationData.username,
+        email: registrationData.email,
+        firstLogin: true,
+        interests: [],
+        createdAt: new Date().toISOString(),
+        emailVerified: true
       });
 
-      // Clear pending user ID
-      localStorage.removeItem('pendingUserId');
+      // Clear registration data
+      localStorage.removeItem('pendingRegistration');
 
-      // Redirect to library
+      // Redirect to interests page
       navigate('/interests', { replace: true });
 
     } catch (error) {
       console.error('Verification error:', error);
-      setError('Failed to verify OTP. Please try again.');
+      setError('Failed to complete registration. Please try again.');
     } finally {
       setLoading(false);
     }

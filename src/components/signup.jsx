@@ -62,48 +62,30 @@ const SignUp = () => {
 
   const sendOTPEmail = async (email, otp) => {
     try {
-      const apiKey = import.meta.env.VITE_MAILJET_API_KEY;
-      const secretKey = import.meta.env.VITE_MAILJET_SECRET_KEY;
-      const senderEmail = import.meta.env.VITE_SENDER_EMAIL;
-      const appName = import.meta.env.VITE_APP_NAME;
-  
-      const response = await fetch('https://api.mailjet.com/v3.1/send', {
+      console.log('Attempting to send OTP to:', email); // Add this log
+      
+      const response = await fetch('http://localhost:3000/api/send-otp', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + btoa(`${apiKey}:${secretKey}`)
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          Messages: [
-            {
-              From: {
-                Email: senderEmail,
-                Name: appName
-              },
-              To: [
-                {
-                  Email: email,
-                }
-              ],
-              Subject: "Your verification code",
-              HTMLPart: `
-                <h3>Welcome to ${appName}!</h3>
-                <p>Your verification code is: <strong>${otp}</strong></p>
-                <p>This code will expire in 10 minutes.</p>
-              `
-            }
-          ]
+          email,
+          otp
         })
       });
   
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Server response error:', errorData); // Add this log
         throw new Error(errorData.message || 'Failed to send OTP email');
       }
   
-      return await response.json();
+      const result = await response.json();
+      console.log('Server response success:', result); // Add this log
+      return result;
     } catch (error) {
-      console.error('Error sending OTP:', error);
+      console.error('Detailed error in sendOTPEmail:', error);
       throw error;
     }
   };
@@ -166,7 +148,7 @@ const SignUp = () => {
       const otp = generateOTP();
       
       try {
-        // Send OTP email before creating the user
+        // Send OTP email
         await sendOTPEmail(email, otp);
       } catch (emailError) {
         setIsVerifying(false);
@@ -174,23 +156,16 @@ const SignUp = () => {
         return;
       }
   
-      // Create auth user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Store user data in Firestore with pending status and OTP
-      await setDoc(doc(db, "users", userCredential.user.uid), {
+      // Store registration data in localStorage
+      const registrationData = {
         username: username.trim(),
         email: email.trim().toLowerCase(),
-        firstLogin: true,
-        interests: [],
-        createdAt: new Date().toISOString(),
-        emailVerified: false,
-        verificationOTP: otp,
+        password, // Be cautious with storing password - it's temporary
+        otp,
         otpExpiry: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
-      });
-  
-      // Store user ID in localStorage for OTP verification
-      localStorage.setItem('pendingUserId', userCredential.user.uid);
+      };
+      
+      localStorage.setItem('pendingRegistration', JSON.stringify(registrationData));
       
       setIsVerifying(false);
       navigate('/verify-otp');
@@ -199,14 +174,7 @@ const SignUp = () => {
       console.error("Registration error:", error);
       setShake(true);
       setIsVerifying(false);
-      
-      if (error.code === "auth/weak-password") {
-        setError({ type: "password", message: "Password should be at least 6 characters" });
-      } else if (error.code === "auth/email-already-in-use") {
-        setError({ type: "email", message: "Email is already registered" });
-      } else {
-        setError({ type: "auth", message: "Registration failed. Please try again." });
-      }
+      setError({ type: "auth", message: "Registration failed. Please try again." });
       setTimeout(() => setShake(false), 500);
     }
   };
@@ -215,27 +183,21 @@ const SignUp = () => {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider); // Fixed: pass provider instead of email
-      
+
       // Check if user already exists in Firestore
       const userDoc = await getDoc(doc(db, "users", result.user.uid));
-      
+
       if (!userDoc.exists()) {
         // Extract username from email (before @)
         const defaultUsername = result.user.email.split('@')[0];
-        
+
         // Check if username is available
         const usernameQuery = query(
           collection(db, "users"), 
           where("username", "==", defaultUsername)
         );
         const usernameSnapshot = await getDocs(usernameQuery);
-        
-        // Generate unique username if needed
-        let finalUsername = defaultUsername;
-        if (!usernameSnapshot.empty) {
-          finalUsername = `${defaultUsername}${Math.floor(Math.random() * 1000)}`;
-        }
-        
+
         // Create new user document
         await setDoc(doc(db, "users", result.user.uid), {
           username: finalUsername,
@@ -244,7 +206,7 @@ const SignUp = () => {
           interests: [],
           createdAt: new Date().toISOString()
         });
-        
+
         navigate("/interests", { replace: true });
       } else {
         navigate("/library", { replace: true });
