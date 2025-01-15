@@ -19,8 +19,13 @@
 }
 
 .highlighted {
+  user-select: none;
   cursor: pointer;
   border-radius: 2px;
+}
+
+.highlighted:active {
+  cursor: pointer; /* Maintain pointer during click */
 }
 
 .note-icon {

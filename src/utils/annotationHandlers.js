@@ -12,7 +12,6 @@ if (!rangy.initialized) {
   rangy.init();
 }
 
-// Map color values to color names
 const colorMap = {
   'rgba(255, 255, 0, 0.3)': 'yellow',
   'rgba(0, 255, 0, 0.3)': 'green',
@@ -21,9 +20,8 @@ const colorMap = {
   'rgba(255, 165, 0, 0.3)': 'orange'
 };
 
-// Function to create applier with dynamic ID
 const createApplierWithId = (className, id) => {
-  return rangy.createCssClassApplier(className, {
+  return rangy.createClassApplier(className, {
     tagNames: ['span'],
     attributes: {'data-annotation-id': id},
     normalize: true
@@ -32,32 +30,13 @@ const createApplierWithId = (className, id) => {
 
 const safeDeserializeRange = (serializedRange) => {
   try {
-    // First try standard deserialization
-    const range = rangy.deserializeRange(serializedRange, document.body);
-    if (range) return range;
+    const rangeInfo = JSON.parse(serializedRange);
+    // Try to deserialize the exact range first
+    return rangy.deserializeRange(rangeInfo.rangy, document.body);
   } catch (e) {
-    console.log('Standard deserialization failed, attempting fallback...', e);
+    console.log('Range deserialization failed:', e);
+    return null;
   }
-
-  try {
-    // Fallback: Parse the serialized range to get text content
-    const match = serializedRange.match(/"characterRange":({[^}]+})/);
-    if (match) {
-      const rangeData = JSON.parse(match[1]);
-      if (rangeData.text) {
-        // Create a new range based on text content
-        return {
-          text: rangeData.text,
-          start: rangeData.start,
-          end: rangeData.end
-        };
-      }
-    }
-  } catch (e) {
-    console.log('Fallback deserialization failed', e);
-  }
-
-  return null;
 };
 
 export const createHighlight = (color, selection) => {
@@ -74,23 +53,45 @@ export const createHighlight = (color, selection) => {
       return null;
     }
 
-    const highlightId = crypto.randomUUID();
-    const applier = createApplierWithId(`highlight-${colorName}`, highlightId);
-
-    // Store additional information about the selection
+    // Get the exact range that was selected
     const range = selection.getRangeAt(0);
     const selectedText = selection.toString();
     
-    // Enhanced serialization with text content
-    const serializedRange = JSON.stringify({
-      rangy: rangy.serializeRange(range, true, document.body),
-      characterRange: {
-        text: selectedText,
-        start: range.startOffset,
-        end: range.endOffset
+    // Check if the selected range overlaps with any existing highlights
+    const highlightedElements = document.querySelectorAll('.highlighted');
+    let hasOverlap = false;
+    
+    highlightedElements.forEach(element => {
+      const elementRange = document.createRange();
+      elementRange.selectNode(element);
+      if (range.compareBoundaryPoints(Range.END_TO_START, elementRange) < 0 &&
+          range.compareBoundaryPoints(Range.START_TO_END, elementRange) > 0) {
+        hasOverlap = true;
       }
     });
 
+    if (hasOverlap) {
+      console.log('Selection overlaps with existing highlight');
+      return null;
+    }
+
+    const highlightId = crypto.randomUUID();
+    const applier = createApplierWithId(`highlight-${colorName}`, highlightId);
+
+    // Store the exact range information
+    const serializedRange = JSON.stringify({
+      rangy: rangy.serializeRange(range, true, document.body),
+      // Store additional context for debugging
+      context: {
+        text: selectedText,
+        startContainer: range.startContainer.textContent,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer.textContent,
+        endOffset: range.endOffset
+      }
+    });
+
+    // Apply the highlight to the current selection
     applier.applyToSelection();
 
     const highlightInfo = {
@@ -112,12 +113,10 @@ export const createHighlight = (color, selection) => {
 
 export const restoreHighlight = (annotation) => {
   try {
-    // Parse the enhanced serialized range
-    const rangeInfo = JSON.parse(annotation.serializedRange);
-    const range = safeDeserializeRange(rangeInfo.rangy);
-
-    // If we got a valid Range object
-    if (range instanceof Range) {
+    // Attempt to restore the exact range
+    const range = safeDeserializeRange(annotation.serializedRange);
+    
+    if (range) {
       const selection = window.getSelection();
       selection.removeAllRanges();
       selection.addRange(range);
@@ -125,51 +124,15 @@ export const restoreHighlight = (annotation) => {
       const applier = createApplierWithId(`highlight-${annotation.color}`, annotation.id);
       applier.applyToSelection();
       selection.removeAllRanges();
-      return;
-    }
-
-    // Fallback: text search method
-    const textNodes = [];
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
-    );
-
-    let foundMatch = false;
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      const index = node.textContent.indexOf(annotation.text);
-      if (index !== -1) {
-        try {
-          const newRange = document.createRange();
-          newRange.setStart(node, index);
-          newRange.setEnd(node, index + annotation.text.length);
-          
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-
-          const applier = createApplierWithId(`highlight-${annotation.color}`, annotation.id);
-          applier.applyToSelection();
-          selection.removeAllRanges();
-          foundMatch = true;
-          break;
-        } catch (e) {
-          console.warn('Failed to create range for node:', e);
-          continue;
-        }
-      }
-    }
-
-    if (!foundMatch) {
-      console.warn('Could not find matching text for annotation:', annotation.text);
+    } else {
+      console.warn('Failed to restore highlight:', annotation.id);
     }
   } catch (error) {
     console.error('Error restoring highlight:', error);
   }
 };
+
+// The rest of your code (findTextNodeContaining, applyAnnotationsToContent, etc.) remains the same
 
 export const findTextNodeContaining = (node, searchText) => {
   const walk = document.createTreeWalker(
@@ -193,76 +156,99 @@ export const applyAnnotationsToContent = (content, annotations) => {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = content;
 
-  // Sort annotations by their position in the content
-  // This ensures we process them in order from start to end
-  annotations.sort((a, b) => {
-    const indexA = tempDiv.textContent.indexOf(a.text);
-    const indexB = tempDiv.textContent.indexOf(b.text);
-    return indexA - indexB;
-  });
-
   // Process each annotation
   annotations.forEach(annotation => {
     try {
-      // Find all instances of the text to highlight
-      const textToHighlight = annotation.text;
-      let currentNode = tempDiv;
-      let textNode;
+      // Parse the serialized range info
+      const rangeInfo = JSON.parse(annotation.serializedRange);
+      const context = rangeInfo.context;
+      
+      if (!context) {
+        console.warn('No context information for annotation:', annotation.id);
+        return;
+      }
 
-      while ((textNode = findTextNodeContaining(currentNode, textToHighlight))) {
-        const nodeContent = textNode.textContent;
-        const startIndex = nodeContent.indexOf(textToHighlight);
-        
-        if (startIndex >= 0) {
-          // Create three parts:
-          // 1. Text before the highlight
-          const beforeText = nodeContent.substring(0, startIndex);
-          
-          // 2. The highlighted text
-          const highlightedText = nodeContent.substring(startIndex, startIndex + textToHighlight.length);
-          
-          // 3. Text after the highlight
-          const afterText = nodeContent.substring(startIndex + textToHighlight.length);
-
-          // Create a document fragment to hold all pieces
-          const fragment = document.createDocumentFragment();
-
-          // Add text before highlight if it exists
-          if (beforeText) {
-            fragment.appendChild(document.createTextNode(beforeText));
+      // Find the specific text node that matches the stored context
+      const walker = document.createTreeWalker(
+        tempDiv,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode: function(node) {
+            // Check if this node's content matches our stored context
+            if (node.textContent === context.startContainer) {
+              return NodeFilter.FILTER_ACCEPT;
+            }
+            return NodeFilter.FILTER_SKIP;
           }
-
-          // Create the highlight span
-          const highlightSpan = document.createElement('span');
-          highlightSpan.className = `highlighted highlight-${annotation.color}`;
-          highlightSpan.setAttribute('data-annotation-id', annotation.id);
-          highlightSpan.setAttribute('data-text', textToHighlight);
-          highlightSpan.textContent = highlightedText;
-
-          // Add note icon if there's a note
-          if (annotation.note) {
-            const noteIcon = document.createElement('span');
-            noteIcon.className = 'note-icon';
-            noteIcon.innerHTML = '📝';
-            noteIcon.setAttribute('data-annotation-id', annotation.id);
-            noteIcon.setAttribute('data-note', annotation.note);
-            highlightSpan.appendChild(noteIcon);
-          }
-
-          // Add the highlight span to the fragment
-          fragment.appendChild(highlightSpan);
-
-          // Add text after highlight if it exists
-          if (afterText) {
-            fragment.appendChild(document.createTextNode(afterText));
-          }
-
-          // Replace the original text node with our fragment
-          textNode.parentNode.replaceChild(fragment, textNode);
         }
+      );
 
-        // Move to next node
-        currentNode = textNode;
+      let found = false;
+      let textNode;
+      while ((textNode = walker.nextNode()) && !found) {
+        // Verify this is the correct node by checking surrounding content
+        if (textNode.textContent === context.startContainer) {
+          const nodeContent = textNode.textContent;
+          const highlightedText = context.text;
+          const startOffset = context.startOffset;
+          
+          // Verify the position matches our stored offsets
+          if (nodeContent.substr(startOffset, highlightedText.length) === highlightedText) {
+            // Create three parts:
+            // 1. Text before the highlight
+            const beforeText = nodeContent.substring(0, startOffset);
+            
+            // 2. The highlighted text
+            const highlightedContent = nodeContent.substring(
+              startOffset,
+              startOffset + highlightedText.length
+            );
+            
+            // 3. Text after the highlight
+            const afterText = nodeContent.substring(startOffset + highlightedText.length);
+
+            // Create a document fragment to hold all pieces
+            const fragment = document.createDocumentFragment();
+
+            // Add text before highlight if it exists
+            if (beforeText) {
+              fragment.appendChild(document.createTextNode(beforeText));
+            }
+
+            // Create the highlight span
+            const highlightSpan = document.createElement('span');
+            highlightSpan.className = `highlighted highlight-${annotation.color}`;
+            highlightSpan.setAttribute('data-annotation-id', annotation.id);
+            highlightSpan.setAttribute('data-text', highlightedText);
+            highlightSpan.textContent = highlightedContent;
+
+            // Add note icon if there's a note
+            if (annotation.note) {
+              const noteIcon = document.createElement('span');
+              noteIcon.className = 'note-icon';
+              noteIcon.innerHTML = '📝';
+              noteIcon.setAttribute('data-annotation-id', annotation.id);
+              noteIcon.setAttribute('data-note', annotation.note);
+              highlightSpan.appendChild(noteIcon);
+            }
+
+            // Add the highlight span to the fragment
+            fragment.appendChild(highlightSpan);
+
+            // Add text after highlight if it exists
+            if (afterText) {
+              fragment.appendChild(document.createTextNode(afterText));
+            }
+
+            // Replace the original text node with our fragment
+            textNode.parentNode.replaceChild(fragment, textNode);
+            found = true;
+          }
+        }
+      }
+
+      if (!found) {
+        console.warn('Could not find exact location for annotation:', annotation.id);
       }
     } catch (error) {
       console.error('Error applying annotation:', error, annotation);
