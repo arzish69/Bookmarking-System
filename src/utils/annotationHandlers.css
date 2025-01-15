@@ -1,7 +1,7 @@
-.highlighted {
-    user-select: text; /* Allow clicking and copying text */
-    cursor: move; /* Indicate interactivity */
+  .highlighted {
+    cursor: move;
     position: relative;
+    /* Remove user-select property completely since we'll handle selection differently */
   }
   
   .highlighted:active {
