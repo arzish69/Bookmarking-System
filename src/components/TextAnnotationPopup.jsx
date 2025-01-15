@@ -2,11 +2,11 @@ import React, { useState, useRef } from 'react';
 import { FaStickyNote, FaClipboard } from 'react-icons/fa';
 
 const HIGHLIGHT_COLORS = [
-  { name: 'yellow', value: 'rgba(255, 255, 0, 0.62)' },
-  { name: 'green', value: '#D4FF32' },
-  { name: 'pink', value: '#ff659f' },
-  { name: 'blue', value: '#67dfff' },
-  { name: 'orange', value: 'rgba(255, 166, 0, 0.71)' }
+  { name: 'yellow', value: 'rgba(255, 255, 0, 0.3)' },
+  { name: 'green', value: 'rgba(0, 255, 0, 0.3)' },
+  { name: 'pink', value: 'rgba(255, 192, 203, 0.3)' },
+  { name: 'blue', value: 'rgba(0, 0, 255, 0.3)' },
+  { name: 'orange', value: 'rgba(255, 165, 0, 0.3)' }
 ];
 
 const TextAnnotationPopup = ({
@@ -23,6 +23,7 @@ const TextAnnotationPopup = ({
   const hideTimeout = useRef(null);
 
   const handleHighlight = (color) => {
+    console.log("TextAnnotationPopup - Highlighting with color:", color);
     onHighlight(selectedText, color);
     setShowColors(false);
   };

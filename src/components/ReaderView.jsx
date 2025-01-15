@@ -6,12 +6,24 @@ import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
 import { FaArrowLeft, FaExternalLinkAlt } from "react-icons/fa";
 import TextAnnotationPopup from "./TextAnnotationPopup";
+import rangy from 'rangy';
+import 'rangy/lib/rangy-classapplier';
+import 'rangy/lib/rangy-serializer';
+import 'rangy/lib/rangy-selectionsaverestore';
+import 'rangy/lib/rangy-textrange';
 import { 
   saveAnnotation, 
   getAnnotations, 
-  getTextOffsets, 
+  createHighlight,
+  restoreHighlight,
+  deleteAnnotation,
   applyAnnotationsToContent 
 } from '../utils/annotationHandlers';
+
+// Initialize rangy
+if (!rangy.initialized) {
+  rangy.init();
+}
 
 const ReaderView = () => {
   const { urlId } = useParams();
@@ -149,7 +161,21 @@ const ReaderView = () => {
   
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
-  }, [annotations]);  
+  }, [annotations]); 
+  
+  // ADD THE NEW RESTORATION EFFECT HERE
+  useEffect(() => {
+    if (content && annotations.length > 0) {
+      // Clear any existing highlights first
+      const contentDiv = contentRef.current;
+      if (!contentDiv) return;
+      
+      // Restore all annotations
+      annotations.forEach(annotation => {
+        restoreHighlight(annotation);
+      });
+    }
+  }, [content, annotations]);
 
   // Text selection handler
   const handleTextSelection = (e) => {
@@ -174,90 +200,48 @@ const ReaderView = () => {
   // Annotation handlers
   const handleHighlight = async (text, color) => {
     try {
-      if (!contentRef.current) return;
-      
-      let offsets;
-      
-      // If we're updating an existing annotation, use its offsets
-      if (currentAnnotation) {
-        offsets = {
-          start: currentAnnotation.startOffset,
-          end: currentAnnotation.endOffset
-        };
-      } else {
-        // For new annotations, get offsets from selection
-        const selection = window.getSelection();
-        offsets = getTextOffsets(contentRef.current, selection);
+      console.log("Attempting to highlight:", text, color); // Debug log
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        console.log("No valid selection"); // Debug log
+        return;
       }
+  
+      const highlightInfo = createHighlight(color, selection);
+      console.log("Highlight info:", highlightInfo); // Debug log
       
+      if (!highlightInfo) {
+        console.log("No highlight info created"); // Debug log
+        return;
+      }
+  
       const annotation = {
-        text,
-        color,
-        startOffset: offsets.start,
-        endOffset: offsets.end
+        ...highlightInfo,
+        note: '',
       };
-      
+  
       const annotationId = await saveAnnotation(user.uid, urlId, annotation);
-      
-      if (currentAnnotation) {
-        // Update existing annotation in state
-        setAnnotations(prev => prev.map(a => 
-          a.id === currentAnnotation.id ? { ...annotation, id: annotationId } : a
-        ));
-      } else {
-        // Add new annotation to state
-        setAnnotations(prev => [...prev, { ...annotation, id: annotationId }]);
-      }
-      
-      setCurrentAnnotation(null);
+      setAnnotations(prev => [...prev, { ...annotation, id: annotationId }]);
       setPopupVisible(false);
     } catch (error) {
-      console.error('Error saving highlight:', error);
+      console.error('Error in handleHighlight:', error);
     }
   };
 
   const handleStickyNote = async (text, noteText) => {
     try {
-      if (!contentRef.current) return;
+      const selection = rangy.getSelection();
+      const highlightInfo = createHighlight('yellow', selection); // Default color for notes
       
-      let offsets;
-      let color;
-      
-      // If we're updating an existing annotation, use its offsets and keep its color
-      if (currentAnnotation) {
-        offsets = {
-          start: currentAnnotation.startOffset,
-          end: currentAnnotation.endOffset
-        };
-        color = currentAnnotation.color; // Keep the existing color
-      } else {
-        // For new annotations, get offsets from selection and use default color
-        const selection = window.getSelection();
-        offsets = getTextOffsets(contentRef.current, selection);
-        color = "rgba(255, 255, 0, 0.62)"; // Default highlight color for new annotations
-      }
-      
+      if (!highlightInfo) return;
+  
       const annotation = {
-        text,
+        ...highlightInfo,
         note: noteText,
-        startOffset: offsets.start,
-        endOffset: offsets.end,
-        color, // Use the determined color
       };
-      
+  
       const annotationId = await saveAnnotation(user.uid, urlId, annotation);
-      
-      if (currentAnnotation) {
-        // Update existing annotation in state
-        setAnnotations(prev => prev.map(a => 
-          a.id === currentAnnotation.id ? { ...annotation, id: annotationId } : a
-        ));
-      } else {
-        // Add new annotation to state
-        setAnnotations(prev => [...prev, { ...annotation, id: annotationId }]);
-      }
-      
-      setCurrentAnnotation(null);
+      setAnnotations(prev => [...prev, { ...annotation, id: annotationId }]);
       setPopupVisible(false);
     } catch (error) {
       console.error('Error saving note:', error);
@@ -318,7 +302,7 @@ const ReaderView = () => {
       <TextAnnotationPopup
         selectedText={selectedText}
         position={popupPosition}
-        currentColor="rgba(255, 255, 0, 0.62)"
+        currentColor="rgba(255, 255, 0, 0.3)"
         onHighlight={handleHighlight}
         onStickyNote={handleStickyNote}
         onCopyText={handleCopyText}
