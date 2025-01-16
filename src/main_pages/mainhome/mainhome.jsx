@@ -62,26 +62,28 @@ const MainHome = () => {
     return (
         <>
         <MainNavbar />
-        <header>
-        <h1>Cool Articles</h1>
-      </header>
-      <div className="band">
-        {articles.map((article) => (
-          <div key={article.id} className={`item-${article.id}`}>
-            <a href={article.url} className="card" target="_blank" rel="noopener noreferrer">
-              <div
-                className="thumb"
-                style={{ backgroundImage: `url(${article.image})` }}
-              ></div>
-              <article>
-                <h1>{article.title}</h1>
-                {article.description && <p>{article.description}</p>}
-                <span>{article.author}</span>
-              </article>
-            </a>
-          </div>
-        ))}
-      </div>
+        <div className="blog">
+            <header>
+                <h1>Cool Articles</h1>
+            </header>
+            <div className="band">
+                {articles.map((article) => (
+                <div key={article.id} className={`item-${article.id}`}>
+                    <a href={article.url} className="homecard" target="_blank" rel="noopener noreferrer">
+                    <div
+                        className="thumb"
+                        style={{ backgroundImage: `url(${article.image})` }}
+                    ></div>
+                    <article>
+                        <h1>{article.title}</h1>
+                        {article.description && <p>{article.description}</p>}
+                        <span>{article.author}</span>
+                    </article>
+                    </a>
+                </div>
+                ))}
+            </div>
+        </div>
         </>
     )
 };

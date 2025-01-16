@@ -7,6 +7,10 @@ header {
   margin: 0 auto;
 }
 
+.blog{
+  margin-top: 100px;
+}
+
 .band {
   width: 90%;
   max-width: 1240px;
@@ -39,7 +43,7 @@ header {
   }
 }
 
-.card {
+.homecard {
   background: white;
   text-decoration: none;
   color: #444;
@@ -52,12 +56,12 @@ header {
   transition: all 0.1s ease-in;
 }
 
-.card:hover {
+.homecard:hover {
   top: -2px;
   box-shadow: 0 4px 5px rgba(0, 0, 0, 0.2);
 }
 
-.card article {
+.homecard article {
   padding: 20px;
   flex: 1;
   display: flex;
@@ -65,18 +69,18 @@ header {
   justify-content: space-between;
 }
 
-.card h1 {
+.homecard h1 {
   font-size: 20px;
   margin: 0;
   color: #333;
 }
 
-.card p {
+.homecard p {
   flex: 1;
   line-height: 1.4;
 }
 
-.card span {
+.homecard span {
   font-size: 12px;
   font-weight: bold;
   color: #999;
@@ -85,7 +89,7 @@ header {
   margin-top: 2em;
 }
 
-.card .thumb {
+.homecard .thumb {
   padding-bottom: 60%;
   background-size: cover;
   background-position: center center;
