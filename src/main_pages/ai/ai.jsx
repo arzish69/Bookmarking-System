@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
 import MainNavbar from "../main_navbar";
 
@@ -132,59 +132,75 @@ const Ai = () => {
       <MainNavbar />
       <div style={{ maxWidth: "600px", margin: "20px auto", padding: "20px", marginTop: "80px" }}>
         {/* Manual Input Section */}
-        <div style={{ marginBottom: "20px", padding: "15px", border: "1px solid #ddd", borderRadius: "5px" }}>
-          <h2 style={{ marginBottom: "10px" }}>Summarize Manually</h2>
-          <form onSubmit={handleManualSubmit} style={{ display: "flex", gap: "10px" }}>
-            <input
-              type="text"
-              value={manualInput}
-              onChange={(e) => setManualInput(e.target.value)}
-              placeholder="Enter text or URL..."
-              style={{ padding: "8px", flex: 1, borderRadius: "4px", border: "1px solid #ccc" }}
-            />
+
+        {/* Saved Bookmarks Section */}
+        <div style={{ padding: "15px", border: "1px solid #ddd", borderRadius: "5px" }}>
+  <h2 style={{ marginBottom: "10px" }}>Saved Bookmarks</h2>
+  {bookmarks.length === 0 ? (
+    <p style={{ color: "#666" }}>No bookmarks saved yet</p>
+  ) : (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      {bookmarks.map((bookmark) => (
+        <div
+          key={bookmark.id}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "10px",
+            border: "1px solid #ccc",
+            borderRadius: "5px",
+            backgroundColor: "#f9f9f9",
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <h4 style={{ margin: "0 0 5px", color: "#007bff" }}>
+              {bookmark.title || "Untitled Bookmark"}
+            </h4>
+            <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>
+              <a
+                href={bookmark.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: "none", color: "#007bff" }}
+              >
+                {bookmark.url}
+              </a>
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "10px" }}>
             <button
-              type="submit"
               style={{
-                padding: "8px 16px",
+                padding: "5px 10px",
                 backgroundColor: "#007bff",
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
                 cursor: "pointer",
               }}
+              onClick={() => fetchSummarizedContent(bookmark.url, true)}
             >
               Summarize
             </button>
-          </form>
+            <button
+              style={{
+                padding: "5px 10px",
+                backgroundColor: "#6c757d",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+              onClick={() => navigator.clipboard.writeText(bookmark.url)}
+            >
+              Copy Link
+            </button>
+          </div>
         </div>
-
-        {/* Saved Bookmarks Section */}
-        <div style={{ padding: "15px", border: "1px solid #ddd", borderRadius: "5px" }}>
-          <h2 style={{ marginBottom: "10px" }}>Saved Bookmarks</h2>
-          {bookmarks.length === 0 ? (
-            <p style={{ color: "#666" }}>No bookmarks saved yet</p>
-          ) : (
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-              {bookmarks.map((bookmark) => (
-                <li
-                  key={bookmark.id}
-                  style={{
-                    padding: "8px",
-                    backgroundColor: "#f8f9fa",
-                    marginBottom: "5px",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => fetchSummarizedContent(bookmark.url, true)} // URL summarization
-                >
-                  <span style={{ color: "blue", textDecoration: "underline" }}>
-                    {bookmark.title || bookmark.url}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      ))}
+    </div>
+  )}
+</div>
 
         {/* Summary Display Section */}
         <div style={{ marginTop: "20px", padding: "15px", border: "1px solid #ddd", borderRadius: "5px" }}>
