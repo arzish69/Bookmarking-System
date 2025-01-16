@@ -89,7 +89,7 @@ const MainNavbar = () => {
     <>
       <Navbar bg="light" expand="lg" fixed="top">
         <Container>
-          <Navbar.Brand href="/mainhome">Clone</Navbar.Brand>
+          <Navbar.Brand href="/mainhome">BookmarkHub</Navbar.Brand>
           <Navbar.Toggle aria-controls="navbar-nav" />
           <Navbar.Collapse id="navbar-nav">
             <Nav className="mx-auto">

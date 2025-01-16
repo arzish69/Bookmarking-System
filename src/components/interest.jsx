@@ -88,7 +88,7 @@ const Recommendation = () => {
             <div className="rounded-circle bg-success bg-opacity-25 d-flex align-items-center justify-content-center mx-auto mb-4" style={{ width: '64px', height: '64px' }}>
               <Check className="text-success" size={32} />
             </div>
-            <h2 className="fw-bold mb-4">You're all set!</h2>
+            <h2 className="fw-bold mb-4 text-center">You're all set!</h2>
             <p className="text-muted mb-4">
               We'll use your interests to recommend articles and content you'll love.
             </p>
@@ -96,7 +96,7 @@ const Recommendation = () => {
               onClick={() => navigate('/mainhome')}
               className="btn btn-primary w-100 py-2"
             >
-              Continue to Library
+              View some Articles !
             </button>
           </div>
         </div>
