@@ -64,7 +64,7 @@ const MainHome = () => {
         <MainNavbar />
         <div className="blog">
             <header>
-                <h1>Cool Articles</h1>
+                <h1>Latest Articles</h1>
             </header>
             <div className="band">
                 {articles.map((article) => (

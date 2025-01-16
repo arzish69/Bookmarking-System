@@ -89,13 +89,10 @@ const MainNavbar = () => {
     <>
       <Navbar bg="light" expand="lg" fixed="top">
         <Container>
-          <Navbar.Brand href="#home">Clone</Navbar.Brand>
+          <Navbar.Brand href="/mainhome">Clone</Navbar.Brand>
           <Navbar.Toggle aria-controls="navbar-nav" />
           <Navbar.Collapse id="navbar-nav">
             <Nav className="mx-auto">
-              <Nav.Link href="/mainhome" className="mx-2">
-                Home
-              </Nav.Link>
               <Nav.Link href="/library" className="mx-2">
                 My Library
               </Nav.Link>
