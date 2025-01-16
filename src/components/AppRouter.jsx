@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
 import Recommendation from './interest.jsx';
+import OTP from '../components/OTPVerification.jsx';
 
 import Home from '../components/home.jsx';
 import Downloads from '../components/downloads.jsx';
@@ -33,6 +34,7 @@ const AppRouter = () => {
         <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
         <Route path="/downloads" element={<Downloads />} />
+        <Route path="/verify-otp" element={<OTP />} />
 
         {/* Protected Routes */}
         <Route

@@ -23,7 +23,7 @@
       margin: 12px 0;
     }
     
-    .login-button {
+    .login-button, .save-button {
       padding: 8px 16px;
       background-color: #4285f4;
       color: white;
@@ -33,7 +33,7 @@
       font-size: 14px;
     }
     
-    .login-button:hover {
+    .login-button:hover, .save-button:hover {
       background-color: #3574e2;
     }
     
@@ -62,6 +62,50 @@
     .bookmark-actions {
       width: 100%;
     }
+
+    .bookmark-form {
+      display: none;
+      width: 100%;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .cancel-button {
+      padding: 8px 16px;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .cancel-button:hover {
+      background-color: #5a6268;
+    }
   </style>
 </head>
 <body>
@@ -79,7 +123,22 @@
         <p id="userEmail"></p>
       </div>
       <div class="bookmark-actions">
-        <!-- Your bookmark functionality here -->
+        <button id="saveBookmarkButton" class="save-button">Save Bookmark</button>
+      </div>
+      <!-- Bookmark Form -->
+      <div id="bookmarkForm" class="bookmark-form">
+        <div class="form-group">
+          <label for="bookmarkTitle">Title</label>
+          <input type="text" id="bookmarkTitle" placeholder="Enter title">
+        </div>
+        <div class="form-group">
+          <label for="bookmarkTags">Tags (space-separated)</label>
+          <input type="text" id="bookmarkTags" placeholder="Enter tags">
+        </div>
+        <div class="button-group">
+          <button id="cancelButton" class="cancel-button">Cancel</button>
+          <button id="confirmSaveButton" class="save-button">Save</button>
+        </div>
       </div>
       <button id="logoutButton" class="logout-button">Logout</button>
     </div>

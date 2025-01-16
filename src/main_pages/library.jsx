@@ -519,7 +519,7 @@ const Library = () => {
                     cursor: selectionMode ? "default" : "pointer",
                     color: "blue",
                   }}
-                  onClick={() => !selectionMode && navigateToReaderView(saved.id)}
+                  onClick={() => !selectionMode && navigateToReaderView(saved)}
                 >
                   {saved.title || saved.url}
                 </span>

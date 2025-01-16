@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
 import MainNavbar from "../main_navbar";
 
 const Ai = () => {
-  const [bookmarks, setBookmarks] = useState([]);
-  const [manualInput, setManualInput] = useState("");
-  const [summary, setSummary] = useState("");
-  const [loading, setLoading] = useState(false);
+    const [bookmarks, setBookmarks] = useState([]);
+    const [manualInput, setManualInput] = useState("");
+    const [summary, setSummary] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
   // Fetch bookmarks from Firebase
   useEffect(() => {
@@ -32,50 +33,90 @@ const Ai = () => {
 
   // Fetch summarized content
   const fetchSummarizedContent = async (textOrUrl, isUrl = false) => {
-  if (isUrl && !isValidHttpUrl(textOrUrl)) {
-    console.error("Invalid URL passed for summarization:", textOrUrl);
-    setSummary("Invalid URL. Please try again.");
-    return;
-  }
+    const user = auth.currentUser;
+    if (!user) return;
 
-  setLoading(true);
-  setSummary(""); // Clear previous summary
-  try {
-    const endpoint = isUrl
-      ? `http://localhost:5000/summarize?url=${encodeURIComponent(textOrUrl)}`
-      : "http://localhost:5000/summarize";
+    if (isUrl && !isValidHttpUrl(textOrUrl)) {
+      setError("Invalid URL. Please try again.");
+      return;
+    }
 
-    const options = isUrl
-      ? { method: "GET" }
-      : {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: textOrUrl }),
-        };
+    setLoading(true);
+    setSummary(""); // Clear previous summary
+    setError(null);
 
-    const response = await fetch(endpoint, options);
+    try {
+      // For URLs, check if we already have the summary stored
+      if (isUrl) {
+        const bookmarkDoc = bookmarks.find(b => b.url === textOrUrl);
+        if (bookmarkDoc && bookmarkDoc.id) {
+          const urlDocRef = doc(collection(db, "users", user.uid, "links"), bookmarkDoc.id);
+          const urlDoc = await getDoc(urlDocRef);
 
-    if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+          if (urlDoc.exists() && urlDoc.data().summary) {
+            setSummary(urlDoc.data().summary);
+            setLoading(false);
+            return;
+          }
+        }
+      }
 
-    const result = await response.json();
-    setSummary(result.summary || "Summary not available.");
-  } catch (error) {
-    console.error("Error fetching summarized content:", error);
-    setSummary("An error occurred. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+      // If no stored summary found or it's manual text input, fetch from backend
+      const endpoint = isUrl
+        ? `http://localhost:5000/summarize?url=${encodeURIComponent(textOrUrl)}`
+        : "http://localhost:5000/summarize";
 
-// Helper function for URL validation
-const isValidHttpUrl = (url) => {
-  try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:";
-  } catch {
-    return false;
-  }
-};
+      const options = isUrl
+        ? { method: "GET" }
+        : {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: textOrUrl }),
+          };
+
+      const response = await fetch(endpoint, options);
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const summaryText = result.summary || "Summary not available.";
+      setSummary(summaryText);
+
+      // Store the summary in Firebase for URLs
+      if (isUrl) {
+        const bookmarkDoc = bookmarks.find(b => b.url === textOrUrl);
+        if (bookmarkDoc && bookmarkDoc.id) {
+          const urlDocRef = doc(collection(db, "users", user.uid, "links"), bookmarkDoc.id);
+          await setDoc(
+            urlDocRef,
+            { 
+              ...bookmarkDoc,
+              summary: summaryText,
+              lastSummarized: new Date().toISOString()
+            },
+            { merge: true }
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching summarized content:", error);
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    // Helper function for URL validation
+    const isValidHttpUrl = (url) => {
+    try {
+        const parsedUrl = new URL(url);
+        return parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:";
+    } catch {
+        return false;
+    }
+    };
 
   // Handle manual text submission
   const handleManualSubmit = (e) => {
