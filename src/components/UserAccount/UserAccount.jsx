@@ -150,16 +150,6 @@ const UserAccount = () => {
                           type="text"
                           className="form-control mb-1"
                           value={username}
-                          onChange={(e) => setUsername(e.target.value)} // Enable input field editing
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Name</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)} // Enable input field editing
                         />
                       </div>
                       <div className="form-group">
@@ -168,7 +158,6 @@ const UserAccount = () => {
                           type="text"
                           className="form-control mb-1"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)} // Enable input field editing
                         />
                         <div className="alert alert-warning mt-3">
                           Your email is not confirmed. Please check your inbox.

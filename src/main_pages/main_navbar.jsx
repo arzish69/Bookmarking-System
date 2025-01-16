@@ -7,6 +7,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import BellIcon from "../assets/bell.svg"; // Import your bell icon
 import Notify from "../components/notify"; // Import Link for client-side navigation
 import LogoutButton from "../components/LogoutButton";
+import userIcon from "../assets/user-circle-1-svgrepo-com.svg";
 
 const MainNavbar = () => {
   const [userName, setUserName] = useState("");
@@ -165,7 +166,7 @@ const MainNavbar = () => {
                 title={
                   <>
                     <img
-                      src="https://via.placeholder.com/30"
+                      src={userIcon}
                       alt="User"
                       className="rounded-circle"
                       style={{ marginRight: "8px" }}

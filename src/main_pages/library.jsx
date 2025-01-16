@@ -474,7 +474,7 @@ const Library = () => {
         </ul>
       </div>
 
-      <div className="container" style={{ marginLeft: "270px", marginTop: "80px" }}>
+      <div className="container" style={{ maxWidth: "1260px", marginLeft: "270px", marginTop: "80px" }}>
         <div style={{ display: "flex", justifyContent: "flex-end", paddingRight: "380px" }}>
         <Button
           variant="primary"
