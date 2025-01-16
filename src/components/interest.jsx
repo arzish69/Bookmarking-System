@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebaseConfig';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { Check, ArrowRight, Bookmark } from 'lucide-react';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Recommendation = () => {
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [isComplete, setIsComplete] = useState(false);
   const navigate = useNavigate();
+
+  const MAX_SELECTIONS = 3;
 
   useEffect(() => {
     const checkFirstLogin = async () => {
@@ -19,7 +22,6 @@ const Recommendation = () => {
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists() && !userDoc.data().firstLogin) {
-        // If not first login, redirect to library
         navigate('/library');
       }
     };
@@ -28,13 +30,13 @@ const Recommendation = () => {
   }, [navigate]);
 
   const handleContinue = async () => {
-    if (selectedInterests.length >= 3) {
+    if (selectedInterests.length === MAX_SELECTIONS) {
       const user = auth.currentUser;
       if (user) {
         const userRef = doc(db, "users", user.uid);
         await updateDoc(userRef, {
           interests: selectedInterests.map(interest => interest.name),
-          firstLogin: false // Update first login flag
+          firstLogin: false
         });
         setIsComplete(true);
       }
@@ -60,92 +62,108 @@ const Recommendation = () => {
   ];
 
   const toggleInterest = (interest) => {
-    if (selectedInterests.includes(interest)) {
-      setSelectedInterests(selectedInterests.filter(i => i !== interest));
-    } else {
-      setSelectedInterests([...selectedInterests, interest]);
-    }
+    setSelectedInterests(prevSelected => {
+      // If already selected, remove it
+      if (prevSelected.find(i => i.id === interest.id)) {
+        return prevSelected.filter(i => i.id !== interest.id);
+      }
+      // If not selected and haven't reached max, add it
+      if (prevSelected.length < MAX_SELECTIONS) {
+        return [...prevSelected, interest];
+      }
+      // If already at max selections, don't add
+      return prevSelected;
+    });
+  };
+
+  const isInterestSelected = (interest) => {
+    return selectedInterests.some(i => i.id === interest.id);
   };
 
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-lg text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-green-500" />
+      <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center">
+        <div className="card shadow-lg mx-auto" style={{ maxWidth: '400px' }}>
+          <div className="card-body text-center p-4">
+            <div className="rounded-circle bg-success bg-opacity-25 d-flex align-items-center justify-content-center mx-auto mb-4" style={{ width: '64px', height: '64px' }}>
+              <Check className="text-success" size={32} />
+            </div>
+            <h2 className="fw-bold mb-4">You're all set!</h2>
+            <p className="text-muted mb-4">
+              We'll use your interests to recommend articles and content you'll love.
+            </p>
+            <button
+              onClick={() => navigate('/mainhome')}
+              className="btn btn-primary w-100 py-2"
+            >
+              Continue to Library
+            </button>
           </div>
-          <h2 className="text-2xl font-bold mb-4">You're all set!</h2>
-          <p className="text-gray-600 mb-6">
-            We'll use your interests to recommend articles and content you'll love.
-          </p>
-          <button
-            onClick={() => navigate('/library')}
-            className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            Continue to Library
-          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="max-w-4xl w-full bg-white rounded-lg shadow-lg p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Welcome to BookmarkHub</h1>
-            <p className="text-gray-600">
-              Select at least 3 topics you're interested in to help us personalize your experience
-            </p>
+    <div className="min-vh-100 bg-light d-flex flex-column align-items-center justify-content-center p-4">
+      <div className="card shadow-lg w-100" style={{ maxWidth: '1200px' }}>
+        <div className="card-body p-4">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h1 className="display-6 fw-bold mb-2">Welcome to BookmarkHub</h1>
+              <p className="text-muted">
+                Select exactly 3 topics you're interested in to help us personalize your experience
+              </p>
+            </div>
+            <Bookmark className="text-primary" size={48} />
           </div>
-          <Bookmark className="w-12 h-12 text-blue-500" />
-        </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-          {interests.map((interest) => (
+          <div className="row g-4 mb-4">
+            {interests.map((interest) => (
+              <div key={interest.id} className="col-6 col-md-4 col-lg-3">
+                <button
+                  onClick={() => toggleInterest(interest)}
+                  disabled={!isInterestSelected(interest) && selectedInterests.length >= MAX_SELECTIONS}
+                  className={`btn w-100 h-100 position-relative p-3 ${
+                    isInterestSelected(interest)
+                      ? 'btn-primary'
+                      : selectedInterests.length >= MAX_SELECTIONS
+                        ? 'btn-outline-secondary opacity-50'
+                        : 'btn-outline-secondary'
+                  }`}
+                  style={{ minHeight: '120px' }}
+                >
+                  {isInterestSelected(interest) && (
+                    <div className="position-absolute top-0 end-0 mt-2 me-2">
+                      <div className="bg-white rounded-circle d-flex align-items-center justify-content-center" style={{ width: '20px', height: '20px' }}>
+                        <Check className="text-primary" size={12} />
+                      </div>
+                    </div>
+                  )}
+                  <div className="fs-3 mb-2">{interest.icon}</div>
+                  <div className="small fw-medium">{interest.name}</div>
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="d-flex justify-content-between align-items-center">
+            <small className="text-muted">
+              {selectedInterests.length} of {MAX_SELECTIONS} selected
+            </small>
             <button
-              key={interest.id}
-              onClick={() => toggleInterest(interest)}
-              className={`
-                relative p-4 rounded-lg border-2 text-center transition-all
-                ${selectedInterests.includes(interest)
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-blue-200'
-                }
-              `}
+              onClick={handleContinue}
+              disabled={selectedInterests.length !== MAX_SELECTIONS}
+              className={`btn ${
+                selectedInterests.length === MAX_SELECTIONS
+                  ? 'btn-primary'
+                  : 'btn-secondary opacity-50'
+              } d-flex align-items-center px-4 py-2`}
             >
-              {selectedInterests.includes(interest) && (
-                <div className="absolute top-2 right-2">
-                  <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Check className="w-3 h-3 text-white" />
-                  </div>
-                </div>
-              )}
-              <div className="text-2xl mb-2">{interest.icon}</div>
-              <div className="text-sm font-medium">{interest.name}</div>
+              Continue
+              <ArrowRight className="ms-2" size={16} />
             </button>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            {selectedInterests.length} of 3 minimum selected
           </div>
-          <button
-            onClick={handleContinue}
-            disabled={selectedInterests.length < 3}
-            className={`
-              flex items-center px-6 py-3 rounded-lg font-medium transition-colors
-              ${selectedInterests.length >= 3
-                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              }
-            `}
-          >
-            Continue
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </button>
         </div>
       </div>
     </div>
