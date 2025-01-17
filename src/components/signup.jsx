@@ -292,6 +292,7 @@ const SignUp = () => {
             <label htmlFor="loginUsername" className="form-label">Username</label>
             <input
               type="text"
+              placeholder="Enter username"
               className={`form-control ${error.type === "auth" ? "is-invalid" : ""}`}
               id="loginUsername"
               value={username}
@@ -303,6 +304,7 @@ const SignUp = () => {
             <label htmlFor="loginPassword" className="form-label">Password</label>
             <input
               type="password"
+              placeholder="Enter password"
               className={`form-control ${error.type === "auth" ? "is-invalid" : ""}`}
               id="loginPassword"
               value={password}
@@ -328,6 +330,7 @@ const SignUp = () => {
               <label htmlFor="registerUsername" className="form-label">Username</label>
               <input
                 type="text"
+                placeholder="Enter username"
                 className={`form-control ${error.type === "username" ? "is-invalid" : ""}`}
                 id="registerUsername"
                 value={username}
@@ -340,6 +343,7 @@ const SignUp = () => {
               <label htmlFor="registerEmail" className="form-label">Email address</label>
               <input
                 type="email"
+                placeholder="Enter your email id"
                 className={`form-control ${error.type === "email" ? "is-invalid" : ""}`}
                 id="registerEmail"
                 value={email}
@@ -352,6 +356,7 @@ const SignUp = () => {
               <label htmlFor="registerPassword" className="form-label">Password</label>
               <input
                 type="password"
+                placeholder="Enter password"
                 className={`form-control ${error.type === "password" ? "is-invalid" : ""}`}
                 id="registerPassword"
                 value={password}
@@ -364,6 +369,7 @@ const SignUp = () => {
               <label htmlFor="registerRepeatPassword" className="form-label">Repeat password</label>
               <input
                 type="password"
+                placeholder="Repeat password"
                 className={`form-control ${error.type === "passwordMismatch" ? "is-invalid" : ""}`}
                 id="registerRepeatPassword"
                 value={repeatPassword}
