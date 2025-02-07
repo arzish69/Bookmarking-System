@@ -7,7 +7,7 @@ const NavBar = () => {
     <nav className="navbar navbar-expand-lg navbar-light">
       <div className="container-fluid">
         <a className="navbar-brand" href="/home">
-          Clone
+          BookmarkHub
         </a>
         <button
           className="navbar-toggler"

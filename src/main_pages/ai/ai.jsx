@@ -157,16 +157,6 @@ const Ai = () => {
             <h4 style={{ margin: "0 0 5px", color: "#007bff" }}>
               {bookmark.title || "Untitled Bookmark"}
             </h4>
-            <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>
-              <a
-                href={bookmark.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ textDecoration: "none", color: "#007bff" }}
-              >
-                {bookmark.url}
-              </a>
-            </p>
           </div>
           <div style={{ display: "flex", gap: "10px" }}>
             <button
