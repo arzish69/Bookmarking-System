@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { collection, getDoc, doc, setDoc } from "firebase/firestore";
-import { db, auth } from "../firebaseConfig";
+import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import Spinner from "react-bootstrap/Spinner";
 import { FaArrowLeft, FaExternalLinkAlt } from "react-icons/fa";
-import TextAnnotationPopup from "./TextAnnotationPopup";
+import TextAnnotationPopup from "../../components/TextAnnotationPopup";
 import rangy from 'rangy';
 import 'rangy/lib/rangy-classapplier';
 import 'rangy/lib/rangy-serializer';
@@ -18,7 +18,7 @@ import {
   restoreHighlight,
   deleteAnnotation,
   applyAnnotationsToContent 
-} from '../utils/annotationHandlers';
+} from '../../utils/annotationHandlers';
 
 // Initialize rangy
 if (!rangy.initialized) {

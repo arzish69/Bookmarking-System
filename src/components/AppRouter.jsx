@@ -1,20 +1,20 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
-import Recommendation from './interest.jsx';
-import OTP from '../components/OTPVerification.jsx';
+import Recommendation from '../main_pages/interests_selection/interest.jsx';
+import OTP from '../main_pages/otp/OTPVerification.jsx';
 
-import Home from '../components/home.jsx';
-import Downloads from '../components/downloads.jsx';
+import Home from '../main_pages/landing/landing.jsx';
+import Downloads from '../main_pages/downloads.jsx';
 import Library from '../main_pages/library.jsx';
-import SignUp from '../components/signup.jsx';
+import SignUp from '../main_pages/auth/signup.jsx';
 import UserAccount from '../components/UserAccount/UserAccount.jsx';
 import Groups from '../main_pages/group/group.jsx';
 import Ai from '../main_pages/ai/ai.jsx';
 import MainHome from '../main_pages/mainhome/mainhome.jsx';
 import MainGroup from '../main_pages/maingroup/maingroup.jsx';
 import GroupSettings from '../main_pages/group/grpsettings.jsx';
-import ReaderView from '../components/ReaderView.jsx';
+import ReaderView from '../main_pages/readerview/ReaderView.jsx';
 import './AppRouter.css';
 
 const AppRouter = () => {
