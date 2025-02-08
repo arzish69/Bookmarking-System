@@ -5,7 +5,7 @@ import { db, auth } from "../../firebaseConfig";
 import { ListGroup, Button, Spinner, Modal } from "react-bootstrap";
 import starIcon from "../../assets/star.svg";
 import { onAuthStateChanged } from "firebase/auth";
-import MainNavbar from "../main_navbar";
+import MainNavbar from "../../components/navbar";
 
 const GroupSettings = () => {
   const { groupId } = useParams();

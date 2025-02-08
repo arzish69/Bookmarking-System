@@ -3,7 +3,7 @@ import { doc, getDoc } from "firebase/firestore"; // Firestore imports
 import { useParams } from "react-router-dom"; // Import useParams from react-router-dom
 import { auth, db } from "../../firebaseConfig"; // Import Firebase config
 import { onAuthStateChanged } from "firebase/auth"; // Import auth state change listener
-import MainNavbar from "../../main_pages/main_navbar";
+import MainNavbar from "../../components/navbar";
 
 const UserAccount = () => {
   const [activeTab, setActiveTab] = useState("account-general"); // Set default tab

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
-import MainNavbar from "../main_navbar";
+import MainNavbar from "../../components/navbar";
 
 const Ai = () => {
     const [bookmarks, setBookmarks] = useState([]);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import MainNavbar from "../main_pages/main_navbar";
+import MainNavbar from "../components/navbar";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { collection, addDoc, getDocs, deleteDoc, getDoc, doc } from "firebase/firestore";
 import { db, auth } from "../firebaseConfig";

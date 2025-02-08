@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal"; // Import Modal
 import Button from "react-bootstrap/Button"; // Import Button
-import MainNavbar from "../main_navbar";
+import MainNavbar from "../../components/navbar";
 
 const MainGroup = () => {
   const [groups, setGroups] = useState([]);

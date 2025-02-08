@@ -1,6 +1,6 @@
 // import React from "react";
 // import "./mainhome.css";
-// import MainNavbar from "../main_navbar";
+// import MainNavbar from "../navbar";
 
 // const articles = [
 //   {
@@ -91,7 +91,7 @@
 // export default MainHome;
 import React from 'react';
 import RecommendationList from '../../components/RecommendationList';
-import MainNavbar from "../main_navbar";
+import MainNavbar from "../../components/navbar";
 
 // Use it in your page/component
 const MainHome = () => {

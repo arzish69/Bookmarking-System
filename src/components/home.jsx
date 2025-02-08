@@ -1,13 +1,13 @@
 import React from "react";
 import "./home.css";
-import NavBar from "./navbar";
+import MainNavbar from "./navbar";
 import Footer from "./footer";
 import images from "../images/v915-wit-002-k.jpg";
 
 function Home() {
   return (
     <>
-      <NavBar />
+      <MainNavbar />
       <div className="home_banner-container">
         <img src={images} alt="" />
         <div className="text-overlay">Making learning easy.</div>

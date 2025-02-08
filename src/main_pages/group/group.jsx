@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import MainNavbar from "../main_navbar";
+import MainNavbar from "../../components/navbar";
 import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, serverTimestamp, orderBy, query, updateDoc, arrayRemove } from "firebase/firestore"; // Add updateDoc, arrayRemove for handling leave group
 import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
