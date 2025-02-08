@@ -7,7 +7,6 @@ import 'rangy/lib/rangy-selectionsaverestore';
 import 'rangy/lib/rangy-textrange';
 import './annotationHandlers.css';
 
-// Initialize rangy
 if (!rangy.initialized) {
   rangy.init();
 }
@@ -20,78 +19,126 @@ const colorMap = {
   'rgba(255, 165, 0, 0.3)': 'orange'
 };
 
-const createApplierWithId = (className, id) => {
-  return rangy.createClassApplier(className, {
-    tagNames: ['span'],
-    attributes: {'data-annotation-id': id},
+const createApplierWithId = (colorName, id) => {
+  return rangy.createClassApplier(`highlight-${colorName}`, {
+    elementTagName: 'span',
+    elementProperties: {
+      className: 'highlighted'
+    },
+    attributes: {
+      'data-annotation-id': id
+    },
     normalize: true
   });
 };
 
-const safeDeserializeRange = (serializedRange) => {
-  try {
-    const rangeInfo = JSON.parse(serializedRange);
-    // Try to deserialize the exact range first
-    return rangy.deserializeRange(rangeInfo.rangy, document.body);
-  } catch (e) {
-    console.log('Range deserialization failed:', e);
-    return null;
+// Enhanced findTextInDocument with scoring
+const findTextInDocument = (searchText) => {
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node) {
+        return node.textContent.includes(searchText) ? 
+          NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    }
+  );
+
+  const matches = [];
+  let node;
+  while (node = walker.nextNode()) {
+    const index = node.textContent.indexOf(searchText);
+    if (index !== -1) {
+      // Calculate surrounding context score
+      const contextBefore = node.textContent.substring(Math.max(0, index - 200), index);
+      const contextAfter = node.textContent.substring(index + searchText.length, 
+        index + searchText.length + 200);
+      
+      matches.push({
+        node,
+        index,
+        contextBefore,
+        contextAfter,
+        xpath: getXPath(node)
+      });
+    }
   }
+  return matches;
+};
+
+// Helper function to get XPath
+const getXPath = (node) => {
+  if (!node) return '';
+  const parts = [];
+  while (node && node.nodeType !== Node.DOCUMENT_NODE) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const siblings = Array.from(node.parentNode.childNodes);
+      const index = siblings.findIndex(n => n === node);
+      parts.unshift(`text()[${index + 1}]`);
+    } else {
+      const tagName = node.tagName.toLowerCase();
+      const siblings = Array.from(node.parentNode.children || []);
+      const sameTagSiblings = siblings.filter(n => n.tagName.toLowerCase() === tagName);
+      const index = sameTagSiblings.findIndex(n => n === node);
+      parts.unshift(`${tagName}[${index + 1}]`);
+    }
+    node = node.parentNode;
+  }
+  return '/' + parts.join('/');
+};
+
+const createRangeFromText = (node, startIndex, text) => {
+  const range = document.createRange();
+  range.setStart(node, startIndex);
+  range.setEnd(node, startIndex + text.length);
+  return range;
 };
 
 export const createHighlight = (color, selection) => {
   try {
-    console.log('Creating highlight with color:', color);
     const colorName = colorMap[color];
-    if (!colorName) {
-      console.error('Invalid color value:', color);
+    if (!colorName || !selection || selection.isCollapsed) {
+      console.error('Invalid color or selection');
       return null;
     }
 
-    if (!selection || selection.isCollapsed) {
-      console.error('Invalid selection');
-      return null;
-    }
-
-    // Get the exact range that was selected
     const range = selection.getRangeAt(0);
     const selectedText = selection.toString();
     
-    // Check if the selected range overlaps with any existing highlights
+    // Check for overlapping highlights
     const highlightedElements = document.querySelectorAll('.highlighted');
-    let hasOverlap = false;
-    
-    highlightedElements.forEach(element => {
+    for (const element of highlightedElements) {
       const elementRange = document.createRange();
       elementRange.selectNode(element);
       if (range.compareBoundaryPoints(Range.END_TO_START, elementRange) < 0 &&
           range.compareBoundaryPoints(Range.START_TO_END, elementRange) > 0) {
-        hasOverlap = true;
+        console.log('Selection overlaps with existing highlight');
+        return null;
       }
-    });
-
-    if (hasOverlap) {
-      console.log('Selection overlaps with existing highlight');
-      return null;
     }
 
     const highlightId = crypto.randomUUID();
-    const applier = createApplierWithId(`highlight-${colorName}`, highlightId);
+    const applier = createApplierWithId(colorName, highlightId);
 
-    // Store the exact range information
+    // Enhanced range serialization
     const serializedRange = JSON.stringify({
+      text: selectedText,
       rangy: rangy.serializeRange(range, true, document.body),
-      // Store additional context for debugging
-      context: {
-        text: selectedText,
-        startContainer: range.startContainer.textContent,
-        startOffset: range.startOffset,
-        endContainer: range.endContainer.textContent,
-        endOffset: range.endOffset
-      }
+      contextBefore: range.startContainer.textContent?.substring(
+        Math.max(0, range.startOffset - 200),
+        range.startOffset
+      ),
+      contextAfter: range.endContainer.textContent?.substring(
+        range.endOffset,
+        range.endOffset + 200
+      ),
+      xpath: getXPath(range.startContainer),
+      startOffset: range.startOffset,
+      endOffset: range.endOffset,
+      domHash: hashNode(range.commonAncestorContainer)
     });
 
-    // Apply the highlight to the current selection
     applier.applyToSelection();
 
     const highlightInfo = {
@@ -102,7 +149,6 @@ export const createHighlight = (color, selection) => {
       note: ''
     };
 
-    console.log('Created highlight info:', highlightInfo);
     selection.removeAllRanges();
     return highlightInfo;
   } catch (error) {
@@ -111,147 +157,197 @@ export const createHighlight = (color, selection) => {
   }
 };
 
-export const restoreHighlight = (annotation) => {
+// Helper function to create a hash of DOM structure
+const hashNode = (node) => {
+  const str = node.innerHTML || node.textContent;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return hash.toString(36);
+};
+
+export const restoreHighlight = async (annotation) => {
   try {
-    // Attempt to restore the exact range
-    const range = safeDeserializeRange(annotation.serializedRange);
-    
-    if (range) {
+    const rangeInfo = JSON.parse(annotation.serializedRange);
+    let range = null;
+    let restorationMethod = '';
+
+    // Method 1: Try rangy deserialization
+    try {
+      range = rangy.deserializeRange(rangeInfo.rangy, document.body);
+      if (range && range.toString().trim() === rangeInfo.text.trim()) {
+        restorationMethod = 'rangy';
+      }
+    } catch (e) {
+      console.log('Rangy deserialization failed, trying xpath method');
+    }
+
+    // Method 2: Try XPath-based restoration
+    if (!range && rangeInfo.xpath) {
+      try {
+        const node = document.evaluate(rangeInfo.xpath, document, null,
+          XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+        if (node) {
+          range = createRangeFromText(node, rangeInfo.startOffset, rangeInfo.text);
+          if (range && range.toString().trim() === rangeInfo.text.trim()) {
+            restorationMethod = 'xpath';
+          }
+        }
+      } catch (e) {
+        console.log('XPath restoration failed, trying context matching');
+      }
+    }
+
+    // Method 3: Context-based matching
+    if (!range) {
+      const matches = findTextInDocument(rangeInfo.text);
+      if (matches.length > 0) {
+        let bestMatch = matches[0];
+        let bestScore = -1;
+
+        for (const match of matches) {
+          const score = calculateContextScore(
+            match.contextBefore, rangeInfo.contextBefore,
+            match.contextAfter, rangeInfo.contextAfter
+          );
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = match;
+          }
+        }
+
+        if (bestScore > 0.7) { // Threshold for acceptable match
+          range = createRangeFromText(bestMatch.node, bestMatch.index, rangeInfo.text);
+          restorationMethod = 'context';
+        }
+      }
+    }
+
+    if (range && range.toString().trim() === rangeInfo.text.trim()) {
       const selection = window.getSelection();
       selection.removeAllRanges();
       selection.addRange(range);
 
-      const applier = createApplierWithId(`highlight-${annotation.color}`, annotation.id);
+      const applier = createApplierWithId(annotation.color, annotation.id);
       applier.applyToSelection();
       selection.removeAllRanges();
-    } else {
-      console.warn('Failed to restore highlight:', annotation.id);
+
+      // Log successful restoration
+      await saveRestorationLog(annotation.id, true, restorationMethod);
+      return true;
     }
+    
+    throw new Error('Could not restore highlight accurately');
   } catch (error) {
-    console.error('Error restoring highlight:', error);
+    console.warn('Failed to restore highlight:', annotation.id, error);
+    await saveRestorationLog(annotation.id, false, null, error.message);
+    return false;
   }
 };
 
-// The rest of your code (findTextNodeContaining, applyAnnotationsToContent, etc.) remains the same
+const calculateContextScore = (actualBefore, expectedBefore, actualAfter, expectedAfter) => {
+  const beforeScore = calculateSimilarity(actualBefore || '', expectedBefore || '');
+  const afterScore = calculateSimilarity(actualAfter || '', expectedAfter || '');
+  return (beforeScore + afterScore) / 2;
+};
 
-export const findTextNodeContaining = (node, searchText) => {
-  const walk = document.createTreeWalker(
-    node,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: function(node) {
-        return node.textContent.includes(searchText) ? 
-          NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+const calculateSimilarity = (str1, str2) => {
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+  
+  if (longer.length === 0) return 1.0;
+  
+  return (longer.length - editDistance(longer, shorter)) / longer.length;
+};
+
+const editDistance = (str1, str2) => {
+  const matrix = Array(str2.length + 1).fill().map(() => 
+    Array(str1.length + 1).fill(0)
+  );
+  
+  for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+  for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+  
+  for (let j = 1; j <= str2.length; j++) {
+    for (let i = 1; i <= str1.length; i++) {
+      if (str1[i-1] === str2[j-1]) {
+        matrix[j][i] = matrix[j-1][i-1];
+      } else {
+        matrix[j][i] = Math.min(
+          matrix[j-1][i-1] + 1,
+          matrix[j][i-1] + 1,
+          matrix[j-1][i] + 1
+        );
       }
     }
-  );
-
-  return walk.nextNode();
+  }
+  return matrix[str2.length][str1.length];
 };
 
 export const applyAnnotationsToContent = (content, annotations) => {
-  if (!content || !annotations || annotations.length === 0) return content;
+  if (!content || !annotations?.length) return content;
 
-  // Create a temporary div to hold the content
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = content;
 
-  // Process each annotation
   annotations.forEach(annotation => {
     try {
-      // Parse the serialized range info
       const rangeInfo = JSON.parse(annotation.serializedRange);
-      const context = rangeInfo.context;
-      
-      if (!context) {
-        console.warn('No context information for annotation:', annotation.id);
-        return;
-      }
-
-      // Find the specific text node that matches the stored context
-      const walker = document.createTreeWalker(
+      const textFinder = document.createTreeWalker(
         tempDiv,
         NodeFilter.SHOW_TEXT,
         {
           acceptNode: function(node) {
-            // Check if this node's content matches our stored context
-            if (node.textContent === context.startContainer) {
-              return NodeFilter.FILTER_ACCEPT;
-            }
-            return NodeFilter.FILTER_SKIP;
+            return node.textContent.includes(rangeInfo.text) ? 
+              NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
           }
         }
       );
 
-      let found = false;
       let textNode;
-      while ((textNode = walker.nextNode()) && !found) {
-        // Verify this is the correct node by checking surrounding content
-        if (textNode.textContent === context.startContainer) {
-          const nodeContent = textNode.textContent;
-          const highlightedText = context.text;
-          const startOffset = context.startOffset;
+      while ((textNode = textFinder.nextNode())) {
+        const nodeText = textNode.textContent;
+        const index = nodeText.indexOf(rangeInfo.text);
+        
+        if (index !== -1) {
+          const beforeText = nodeText.substring(0, index);
+          const highlightedText = nodeText.substring(index, index + rangeInfo.text.length);
+          const afterText = nodeText.substring(index + rangeInfo.text.length);
+
+          const fragment = document.createDocumentFragment();
           
-          // Verify the position matches our stored offsets
-          if (nodeContent.substr(startOffset, highlightedText.length) === highlightedText) {
-            // Create three parts:
-            // 1. Text before the highlight
-            const beforeText = nodeContent.substring(0, startOffset);
-            
-            // 2. The highlighted text
-            const highlightedContent = nodeContent.substring(
-              startOffset,
-              startOffset + highlightedText.length
-            );
-            
-            // 3. Text after the highlight
-            const afterText = nodeContent.substring(startOffset + highlightedText.length);
-
-            // Create a document fragment to hold all pieces
-            const fragment = document.createDocumentFragment();
-
-            // Add text before highlight if it exists
-            if (beforeText) {
-              fragment.appendChild(document.createTextNode(beforeText));
-            }
-
-            // Create the highlight span
-            const highlightSpan = document.createElement('span');
-            highlightSpan.className = `highlighted highlight-${annotation.color}`;
-            highlightSpan.setAttribute('data-annotation-id', annotation.id);
-            highlightSpan.setAttribute('data-text', highlightedText);
-            highlightSpan.textContent = highlightedContent;
-
-            // Add note icon if there's a note
-            if (annotation.note) {
-              const noteIcon = document.createElement('span');
-              noteIcon.className = 'note-icon';
-              noteIcon.innerHTML = '📝';
-              noteIcon.setAttribute('data-annotation-id', annotation.id);
-              noteIcon.setAttribute('data-note', annotation.note);
-              highlightSpan.appendChild(noteIcon);
-            }
-
-            // Add the highlight span to the fragment
-            fragment.appendChild(highlightSpan);
-
-            // Add text after highlight if it exists
-            if (afterText) {
-              fragment.appendChild(document.createTextNode(afterText));
-            }
-
-            // Replace the original text node with our fragment
-            textNode.parentNode.replaceChild(fragment, textNode);
-            found = true;
+          if (beforeText) {
+            fragment.appendChild(document.createTextNode(beforeText));
           }
+
+          const highlightSpan = document.createElement('span');
+          highlightSpan.className = `highlighted highlight-${annotation.color}`;
+          highlightSpan.setAttribute('data-annotation-id', annotation.id);
+          highlightSpan.textContent = highlightedText;
+
+          if (annotation.note) {
+            const noteIcon = document.createElement('span');
+            noteIcon.className = 'note-icon';
+            noteIcon.innerHTML = '📝';
+            noteIcon.setAttribute('data-annotation-id', annotation.id);
+            noteIcon.setAttribute('data-note', annotation.note);
+            highlightSpan.appendChild(noteIcon);
+          }
+
+          fragment.appendChild(highlightSpan);
+          
+          if (afterText) {
+            fragment.appendChild(document.createTextNode(afterText));
+          }
+
+          textNode.parentNode.replaceChild(fragment, textNode);
+          break;
         }
       }
-
-      if (!found) {
-        console.warn('Could not find exact location for annotation:', annotation.id);
-      }
     } catch (error) {
-      console.error('Error applying annotation:', error, annotation);
+      console.error('Error applying annotation:', error);
     }
   });
 
@@ -261,14 +357,11 @@ export const applyAnnotationsToContent = (content, annotations) => {
 export const saveAnnotation = async (userId, urlId, annotation) => {
   try {
     const annotationsRef = collection(db, `users/${userId}/links/${urlId}/annotations`);
-    
-    // Always create a new annotation document
     const docRef = await addDoc(annotationsRef, {
       ...annotation,
       createdAt: new Date(),
       updatedAt: new Date()
     });
-    
     console.log('Successfully saved annotation with ID:', docRef.id);
     return docRef.id;
   } catch (error) {
@@ -277,11 +370,25 @@ export const saveAnnotation = async (userId, urlId, annotation) => {
   }
 };
 
+const saveRestorationLog = async (annotationId, success, method, error = null) => {
+  try {
+    const logsRef = collection(db, 'annotationRestorationLogs');
+    await addDoc(logsRef, {
+      annotationId,
+      success,
+      method,
+      error,
+      timestamp: new Date()
+    });
+  } catch (err) {
+    console.error('Error saving restoration log:', err);
+  }
+};
+
 export const getAnnotations = async (userId, urlId) => {
   try {
     const annotationsRef = collection(db, `users/${userId}/links/${urlId}/annotations`);
     const annotationsSnap = await getDocs(annotationsRef);
-    
     return annotationsSnap.docs.map(doc => ({
       id: doc.id,
       ...doc.data()

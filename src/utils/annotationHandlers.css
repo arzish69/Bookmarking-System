@@ -20,7 +20,7 @@
 
 .highlighted {
   user-select: none;
-  cursor: pointer;
+  cursor: move;
   border-radius: 2px;
 }
 
